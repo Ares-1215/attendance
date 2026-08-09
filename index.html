@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>彰化轉運中心 出勤表</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>">
+<script src="xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f4f6f9; --card:#fff; --line:#e2e8f0; --txt:#1e293b; --sub:#64748b;
+  --brand:#1d4ed8; --brand-light:#eff6ff;
+  --wknd:#fff7ed; --today:#fef9c3;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{font-family:"Microsoft JhengHei","Segoe UI",sans-serif; background:var(--bg); color:var(--txt); font-size:14px;}
+/* ===== 登入 ===== */
+#gate{position:fixed; inset:0; background:linear-gradient(135deg,#1e3a8a,#1d4ed8); display:flex; align-items:center; justify-content:center; z-index:99;}
+#gate .box{background:#fff; padding:36px 40px; border-radius:16px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.3); width:min(90vw,340px);}
+#gate h1{font-size:20px; margin-bottom:4px;}
+#gate p{color:var(--sub); font-size:13px; margin-bottom:18px;}
+#gate input{width:100%; padding:12px; font-size:22px; text-align:center; letter-spacing:8px; border:2px solid var(--line); border-radius:10px; outline:none;}
+#gate input:focus{border-color:var(--brand);}
+#gate .err{color:#dc2626; font-size:13px; height:18px; margin-top:8px;}
+/* ===== 頂欄 ===== */
+header{background:#fff; border-bottom:1px solid var(--line); padding:10px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; position:sticky; top:0; z-index:20;}
+header h1{font-size:17px; white-space:nowrap;}
+header .spacer{flex:1;}
+select,button{font-family:inherit; font-size:14px; border:1px solid var(--line); border-radius:8px; background:#fff; padding:7px 12px; cursor:pointer;}
+button:hover{background:#f1f5f9;}
+button.primary{background:var(--brand); color:#fff; border-color:var(--brand);}
+button.primary:hover{background:#1e40af;}
+#saveState{font-size:12px; color:var(--sub); min-width:64px; text-align:center;}
+#saveState.saving{color:#d97706;}
+#saveState.saved{color:#16a34a;}
+#saveState.error{color:#dc2626; font-weight:bold;}
+/* ===== 月份頁籤 ===== */
+#monthTabs{display:flex; gap:4px; padding:8px 16px 0; flex-wrap:wrap;}
+#monthTabs button{padding:6px 14px; border-radius:8px 8px 0 0; border-bottom:none; font-weight:bold; color:var(--sub);}
+#monthTabs button.on{background:var(--brand); color:#fff; border-color:var(--brand);}
+/* ===== 圖例 / 印章 ===== */
+#legend{display:flex; gap:6px; padding:10px 16px; flex-wrap:wrap; align-items:center;}
+#legend .hint{font-size:12px; color:var(--sub); margin-right:4px;}
+.chip{padding:4px 10px; border-radius:14px; border:2px solid transparent; font-size:13px; cursor:pointer; user-select:none; font-weight:bold;}
+.chip.on{border-color:#0f172a; box-shadow:0 2px 6px rgba(0,0,0,.25); transform:scale(1.08);}
+/* ===== 表格 ===== */
+#wrap{margin:0 16px 24px; background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:auto; max-height:calc(100vh - 210px);}
+table{border-collapse:separate; border-spacing:0; white-space:nowrap;}
+th,td{border-right:1px solid var(--line); border-bottom:1px solid var(--line); padding:0; text-align:center; font-size:13px; background:#fff;}
+thead th{position:sticky; top:0; z-index:5; background:#f8fafc; font-size:12px; color:var(--sub);}
+thead tr:nth-child(2) th{top:22px;}
+thead th.dnum{min-width:34px; padding:3px 0; font-weight:bold; color:var(--txt);}
+th.sticky1,td.sticky1{position:sticky; left:0; z-index:6; min-width:36px;}
+th.sticky2,td.sticky2{position:sticky; left:36px; z-index:6; min-width:76px; text-align:left; padding:0 6px; font-weight:bold;}
+th.sticky3,td.sticky3{position:sticky; left:112px; z-index:6; min-width:52px; box-shadow:2px 0 4px rgba(0,0,0,.06);}
+thead th.sticky1,thead th.sticky2,thead th.sticky3{z-index:8;}
+td.day{min-width:34px; height:30px; cursor:pointer; font-weight:bold;}
+td.day:hover{outline:2px solid var(--brand); outline-offset:-2px;}
+td.wknd{background:var(--wknd);}
+td.today{background:var(--today);}
+th.wkndH{background:#ffedd5; color:#c2410c;}
+th.todayH{background:var(--today); color:#a16207;}
+td.stat{min-width:44px; font-weight:bold; background:#f8fafc;}
+td.stat.leave{color:#dc2626;}
+td.stat.off{color:#64748b;}
+td.stat.work{color:#16a34a;}
+td.stat.ot{color:#d97706;}
+tfoot td{position:sticky; bottom:0; background:#eef2ff; font-weight:bold; color:var(--brand); z-index:5; padding:4px 0;}
+tr:hover td{background:#f0f9ff;}
+tr:hover td.wknd{background:#fde8d0;}
+tr:hover td.today{background:#fef08a;}
+/* 代碼顏色 */
+.c-1{color:#16a34a;}
+.c-half{color:#0d9488;}
+.c-休{background:#e2e8f0!important; color:#475569;}
+.c-特{background:#dbeafe!important; color:#1d4ed8;}
+.c-病{background:#ffedd5!important; color:#c2410c;}
+.c-事{background:#fef9c3!important; color:#a16207;}
+.c-婚{background:#fce7f3!important; color:#be185d;}
+.c-喪{background:#e5e5e5!important; color:#404040;}
+.c-公{background:#ccfbf1!important; color:#0f766e;}
+.c-家{background:#fef3c7!important; color:#b45309;}
+.c-生理{background:#fae8ff!important; color:#a21caf; font-size:11px!important;}
+.c-教育{background:#e0f2fe!important; color:#0369a1; font-size:11px!important;}
+.c-產{background:#fbcfe8!important; color:#9d174d;}
+.c-陪產{background:#fbcfe8!important; color:#9d174d; font-size:11px!important;}
+.c-產檢{background:#fbcfe8!important; color:#9d174d; font-size:11px!important;}
+.c-職傷{background:#fee2e2!important; color:#b91c1c; font-size:11px!important;}
+.c-職災{background:#fecaca!important; color:#991b1b; font-size:11px!important;}
+.c-留停{background:#ede9fe!important; color:#6d28d9; font-size:11px!important;}
+.c-X{color:#94a3b8; text-decoration:line-through;}
+/* ===== 選碼面板 ===== */
+#palette{position:absolute; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.2); padding:10px; display:none; z-index:50; width:230px;}
+#palette .grid{display:grid; grid-template-columns:repeat(4,1fr); gap:5px;}
+#palette .cell{padding:7px 2px; border-radius:8px; text-align:center; cursor:pointer; font-weight:bold; font-size:13px; border:1px solid var(--line);}
+#palette .cell:hover{outline:2px solid var(--brand);}
+#palette .who{font-size:12px; color:var(--sub); margin-bottom:6px; text-align:center;}
+/* ===== 彙總 ===== */
+#summary{margin:0 16px 24px; display:none;}
+#summary .opts{margin-bottom:10px; display:flex; gap:14px; align-items:center; font-size:13px; color:var(--sub); flex-wrap:wrap;}
+.sumcard{background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 16px; margin-bottom:10px;}
+.sumcard .nm{font-weight:bold; font-size:15px; margin-bottom:6px;}
+.sumcard .nm small{color:var(--sub); font-weight:normal; margin-left:8px;}
+.sumline{display:flex; gap:8px; margin:3px 0; font-size:13.5px; align-items:baseline;}
+.sumline .tag{padding:2px 10px; border-radius:10px; font-weight:bold; font-size:12.5px; white-space:nowrap;}
+.sumempty{color:#16a34a; font-size:13.5px;}
+#sumNone{background:#fff; border:1px dashed var(--line); border-radius:10px; padding:30px; text-align:center; color:var(--sub); display:none;}
+/* ===== 名冊 ===== */
+#roster{position:fixed; inset:0; background:rgba(15,23,42,.5); display:none; align-items:flex-start; justify-content:center; z-index:60; padding:5vh 12px;}
+#roster .panel{background:#fff; border-radius:14px; width:min(96vw,640px); max-height:90vh; overflow:auto; padding:20px;}
+#roster h2{font-size:17px; margin-bottom:12px;}
+#roster table{width:100%;}
+#roster th,#roster td{padding:6px 8px; font-size:13px;}
+#roster input{font-family:inherit; font-size:13px; border:1px solid var(--line); border-radius:6px; padding:5px 7px; width:100%;}
+#roster .inactive td{opacity:.45;}
+#roster .addrow input{background:#f0fdf4;}
+.mini{padding:4px 9px; font-size:12px; border-radius:6px;}
+@media (max-width:640px){
+  header h1{font-size:15px;}
+  th.sticky3,td.sticky3{display:none;}
+}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="box">
+    <h1>📅 彰化轉運中心 出勤表</h1>
+    <p>請輸入通行碼</p>
+    <input id="pass" type="password" inputmode="numeric" maxlength="4" autofocus>
+    <div class="err" id="passErr"></div>
+  </div>
+</div>
+
+<header>
+  <h1>📅 彰化轉運中心 出勤表</h1>
+  <select id="yearSel"></select>
+  <button id="viewBtn">📋 彙總檢視</button>
+  <span class="spacer"></span>
+  <span id="saveState"></span>
+  <button id="rosterBtn">👥 名冊</button>
+  <button id="expMonth" class="primary">⬇ 匯出本月</button>
+  <button id="expYear">⬇ 匯出全年</button>
+</header>
+
+<div id="monthTabs"></div>
+
+<div id="legend">
+  <span class="hint">點格子選代碼；或先點下方「印章」再連續點格子快速填：</span>
+</div>
+
+<div id="wrap"><table id="grid"></table></div>
+
+<div id="summary">
+  <div class="opts">
+    <b style="color:var(--txt)">本月勤缺彙總</b>（對照另一系統輸入用）
+    <label><input type="checkbox" id="sumRest"> 含排休</label>
+    <label><input type="checkbox" id="sumOnly" checked> 只顯示有勤缺的人</label>
+  </div>
+  <div id="sumList"></div>
+  <div id="sumNone">🎉 本月全員無請假紀錄</div>
+</div>
+
+<div id="palette">
+  <div class="who" id="palWho"></div>
+  <div class="grid" id="palGrid"></div>
+</div>
+
+<div id="roster">
+  <div class="panel">
+    <h2>👥 員工名冊 <button class="mini" style="float:right" onclick="document.getElementById('roster').style.display='none'">✕ 關閉</button></h2>
+    <table>
+      <thead><tr><th>序</th><th>姓名</th><th>工號</th><th>到職日</th><th>狀態</th><th></th></tr></thead>
+      <tbody id="rosterBody"></tbody>
+      <tbody>
+        <tr class="addrow">
+          <td><input id="nSeq" style="width:44px" placeholder="序"></td>
+          <td><input id="nName" placeholder="姓名"></td>
+          <td><input id="nNo" placeholder="工號"></td>
+          <td><input id="nHire" placeholder="115/8/1"></td>
+          <td colspan="2"><button class="mini primary" id="addEmp">＋新增</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="font-size:12px;color:var(--sub);margin-top:10px">停用＝離職/異動，不會刪資料，只是不顯示在表格。</p>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================= 設定 ================= */
+const SB_URL = "https://hmqnlovyzlvvnkqmfwtt.supabase.co/rest/v1";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtcW5sb3Z5emx2dm5rcW1md3R0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5NjgxMTAsImV4cCI6MjEwMDU0NDExMH0.epqZ-DZsthezuTjfFGEhosR3hU3v8FgR4w0xnYOHN6s";
+const PASS = "8036";
+const H = {"apikey":SB_KEY,"Authorization":"Bearer "+SB_KEY,"Content-Type":"application/json"};
+// 代碼定義（順序=面板順序）
+const CODES = ["1","0.5","休","特","病","事","家","公","婚","喪","生理","教育","產","陪產","產檢","職傷","職災","留停","X",""];
+const CODE_LABEL = {"1":"上班","0.5":"半天","休":"排休","特":"特休","病":"病假","事":"事假","家":"家庭","公":"公假","婚":"婚假","喪":"喪假","生理":"生理","教育":"教育","產":"產假","陪產":"陪產","產檢":"產檢","職傷":"職傷","職災":"職災","留停":"留停","X":"X","":"清空"};
+const LEAVE_SET = new Set(["特","事","家","病","生理","公","教育","職災","職傷","產","陪產","產檢","婚","喪"]);  // 與Excel AK公式一致
+const WD = ["日","一","二","三","四","五","六"];
+
+/* ================= 狀態 ================= */
+let employees = [];            // {id,seq,name,emp_no,hire_date,active}
+let records = {};              // key `${emp_no}_${yy}_${mm}` -> {days:[31], overtime}
+let yy = 115, mm = (new Date().getMonth()+1);
+let stamp = null;              // 印章模式選的代碼
+let palTarget = null;          // {emp_no, di}
+const dirty = new Set(); let saveTimer = null;
+
+const $ = id => document.getElementById(id);
+const key = (e,m) => `${e}_${yy}_${m}`;
+const daysInMonth = (y,m) => new Date(y+1911, m, 0).getDate();
+const wday = (y,m,d) => new Date(y+1911, m-1, d).getDay();
+function getRec(emp_no, m){
+  const k = key(emp_no, m);
+  if(!records[k]) records[k] = {days:Array(31).fill(""), overtime:0, _new:true};
+  return records[k];
+}
+
+/* ================= 登入 ================= */
+if(sessionStorage.getItem("att_ok")==="1"){ $("gate").style.display="none"; }
+$("pass").addEventListener("input", e=>{
+  if(e.target.value.length===4){
+    if(e.target.value===PASS){ sessionStorage.setItem("att_ok","1"); $("gate").style.display="none"; }
+    else { $("passErr").textContent="通行碼錯誤"; e.target.value=""; }
+  }
+});
+
+/* ================= 資料載入 ================= */
+async function loadAll(){
+  setSave("載入中…","saving");
+  const [eRes, rRes] = await Promise.all([
+    fetch(`${SB_URL}/att_employees?select=*&order=seq,emp_no`, {headers:H}),
+    fetch(`${SB_URL}/att_records?select=emp_no,yy,mm,days,overtime&yy=eq.${yy}`, {headers:H})
+  ]);
+  employees = await eRes.json();
+  records = {};
+  (await rRes.json()).forEach(r=>{
+    const days = Array.isArray(r.days)? r.days.slice(0,31) : [];
+    while(days.length<31) days.push("");
+    records[`${r.emp_no}_${r.yy}_${r.mm}`] = {days, overtime:+r.overtime||0};
+  });
+  setSave("✓ 已載入","saved");
+  render();
+}
+
+/* ================= 儲存（防抖） ================= */
+function markDirty(emp_no, m){
+  dirty.add(`${emp_no}|${m}`);
+  setSave("● 未儲存…","saving");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flush, 900);
+}
+async function flush(){
+  const batch = [...dirty]; dirty.clear();
+  if(!batch.length) return;
+  const rows = batch.map(k=>{
+    const [e,m] = k.split("|");
+    const r = getRec(e,+m);
+    return {emp_no:e, yy, mm:+m, days:r.days, overtime:r.overtime};
+  });
+  try{
+    const res = await fetch(`${SB_URL}/att_records?on_conflict=emp_no,yy,mm`, {
+      method:"POST", headers:{...H,"Prefer":"resolution=merge-duplicates"}, body:JSON.stringify(rows)});
+    if(!res.ok) throw new Error(res.status);
+    setSave("✓ 已儲存","saved");
+  }catch(err){
+    batch.forEach(b=>dirty.add(b));
+    setSave("✗ 儲存失敗! 檢查網路","error");
+  }
+}
+function setSave(t,c){ const s=$("saveState"); s.textContent=t; s.className=c; }
+window.addEventListener("beforeunload", e=>{ if(dirty.size){ flush(); e.preventDefault(); } });
+
+/* ================= 統計 ================= */
+function calcStats(rec, dim){
+  let work=0, leave=0, off=0;
+  for(let i=0;i<dim;i++){
+    const v = rec.days[i];
+    if(v==="" ) continue;
+    const num = parseFloat(v);
+    if(!isNaN(num)) work += num;
+    else if(v==="休") off++;
+    else if(LEAVE_SET.has(v)) leave++;
+  }
+  const ot = work>22 ? +(work-22).toFixed(1) : 0;   // Excel AM公式
+  return {work:+work.toFixed(1), leave, off, ot};
+}
+
+/* ================= 主表 ================= */
+function render(){
+  renderTabs(); renderLegend();
+  if($("summary").style.display==="block") renderSummary(); else renderGrid();
+}
+function renderTabs(){
+  $("monthTabs").innerHTML = Array.from({length:12},(_,i)=>
+    `<button class="${i+1===mm?'on':''}" onclick="switchMonth(${i+1})">${i+1}月</button>`).join("");
+}
+window.switchMonth = m => { mm=m; render(); };
+
+function renderLegend(){
+  const el = $("legend");
+  el.querySelectorAll(".chip").forEach(c=>c.remove());
+  CODES.filter(c=>c!=="").forEach(c=>{
+    const s = document.createElement("span");
+    s.className = "chip c-"+cssCode(c) + (stamp===c?" on":"");
+    s.textContent = c + (CODE_LABEL[c]&&CODE_LABEL[c]!==c?` ${CODE_LABEL[c]}`:"");
+    s.onclick = ()=>{ stamp = (stamp===c? null : c); renderLegend(); };
+    el.appendChild(s);
+  });
+  const s = document.createElement("span");
+  s.className = "chip" + (stamp===""?" on":"");
+  s.style.background="#fff"; s.style.border= stamp===""?"2px solid #0f172a":"2px dashed #cbd5e1";
+  s.textContent = "⌫ 清空";
+  s.onclick = ()=>{ stamp = (stamp===""? null : ""); renderLegend(); };
+  el.appendChild(s);
+}
+function cssCode(c){ return c==="1"?"1": c==="0.5"?"half": c; }
+
+function renderGrid(){
+  const dim = daysInMonth(yy,mm);
+  const today = new Date();
+  const isThisMonth = (today.getFullYear()===yy+1911 && today.getMonth()+1===mm);
+  const td = isThisMonth? today.getDate() : -1;
+  let h1 = `<tr><th class="sticky1">序</th><th class="sticky2">姓名</th><th class="sticky3">工號</th>`;
+  let h2 = `<tr><th class="sticky1"></th><th class="sticky2"></th><th class="sticky3"></th>`;
+  for(let d=1;d<=dim;d++){
+    const w = wday(yy,mm,d);
+    const cls = (d===td?"todayH": (w===0||w===6)?"wkndH":"");
+    h1 += `<th class="dnum ${cls}">${d}</th>`;
+    h2 += `<th class="${cls}">${WD[w]}</th>`;
+  }
+  h1 += `<th>上班</th><th>請假</th><th>排休</th><th>加班</th></tr>`;
+  h2 += `<th colspan="4" style="font-size:10px">天數統計</th></tr>`;
+
+  let body = "";
+  const actives = employees.filter(e=>e.active);
+  for(const e of actives){
+    const rec = getRec(e.emp_no, mm);
+    const st = calcStats(rec, dim);
+    body += `<tr><td class="sticky1" style="color:var(--sub)">${e.seq===999?"":e.seq}</td>
+      <td class="sticky2" title="到職 ${e.hire_date}">${e.name}</td>
+      <td class="sticky3" style="color:var(--sub);font-size:12px">${e.emp_no}</td>`;
+    for(let d=1;d<=dim;d++){
+      const v = rec.days[d-1];
+      const w = wday(yy,mm,d);
+      const cls = ["day", v?("c-"+cssCode(v)):"", d===td?"today":(w===0||w===6)?"wknd":""].join(" ");
+      body += `<td class="${cls}" data-e="${e.emp_no}" data-d="${d}">${v}</td>`;
+    }
+    body += `<td class="stat work">${st.work||""}</td><td class="stat leave">${st.leave||""}</td>
+             <td class="stat off">${st.off||""}</td><td class="stat ot">${st.ot||""}</td></tr>`;
+  }
+  // 每日上班人數
+  let foot = `<tr><td class="sticky1"></td><td class="sticky2">當日上班人數</td><td class="sticky3"></td>`;
+  for(let d=1;d<=dim;d++){
+    let n=0;
+    for(const e of actives){ const v=getRec(e.emp_no,mm).days[d-1]; const f=parseFloat(v); if(!isNaN(f)&&f>0) n++; }
+    foot += `<td>${n||""}</td>`;
+  }
+  foot += `<td colspan="4"></td></tr>`;
+  $("grid").innerHTML = `<thead>${h1}${h2}</thead><tbody>${body}</tbody><tfoot>${foot}</tfoot>`;
+
+  $("grid").querySelectorAll("td.day").forEach(cell=>{
+    cell.onclick = ev => onCell(cell, ev);
+    cell.oncontextmenu = ev => { ev.preventDefault(); setCell(cell.dataset.e, +cell.dataset.d, ""); };
+  });
+}
+
+function onCell(cell, ev){
+  const e = cell.dataset.e, d = +cell.dataset.d;
+  if(stamp!==null){ setCell(e,d,stamp); return; }
+  // 開面板
+  palTarget = {e,d};
+  const emp = employees.find(x=>x.emp_no===e);
+  $("palWho").textContent = `${emp?emp.name:e} — ${mm}/${d}`;
+  $("palGrid").innerHTML = CODES.map(c=>
+    `<div class="cell c-${cssCode(c)}" data-c="${c}" style="${c===""?"border:1px dashed #cbd5e1":""}">${c===""?"⌫":c}</div>`).join("");
+  $("palGrid").querySelectorAll(".cell").forEach(x=> x.onclick = ()=>{ setCell(palTarget.e, palTarget.d, x.dataset.c); hidePal(); });
+  const pal = $("palette");
+  pal.style.display="block";
+  const r = cell.getBoundingClientRect();
+  let x = r.left + window.scrollX - 90, y = r.bottom + window.scrollY + 6;
+  x = Math.max(8, Math.min(x, window.innerWidth-246));
+  if(r.bottom + 230 > window.innerHeight) y = r.top + window.scrollY - 236;
+  pal.style.left = x+"px"; pal.style.top = y+"px";
+  ev.stopPropagation();
+}
+function hidePal(){ $("palette").style.display="none"; palTarget=null; }
+document.addEventListener("click", e=>{ if(!$("palette").contains(e.target)) hidePal(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ hidePal(); stamp=null; renderLegend(); } });
+
+function setCell(emp_no, d, v){
+  getRec(emp_no, mm).days[d-1] = v;
+  markDirty(emp_no, mm);
+  renderGrid();
+}
+
+/* ================= 彙總檢視 ================= */
+$("viewBtn").onclick = ()=>{
+  const sum = $("summary"), wrap = $("wrap");
+  const showSum = sum.style.display!=="block";
+  sum.style.display = showSum?"block":"none";
+  wrap.style.display = showSum?"none":"block";
+  $("viewBtn").textContent = showSum? "📅 格子檢視" : "📋 彙總檢視";
+  render();
+};
+$("sumRest").onchange = renderSummary;
+$("sumOnly").onchange = renderSummary;
+
+function fmtRanges(list){ // [3,4,5,9] -> "7/3~7/5、7/9"
+  const out=[]; let s=null,p=null;
+  for(const d of list){
+    if(s===null){ s=p=d; continue; }
+    if(d===p+1){ p=d; continue; }
+    out.push(s===p? `${mm}/${s}` : `${mm}/${s}~${mm}/${p}`); s=p=d;
+  }
+  if(s!==null) out.push(s===p? `${mm}/${s}` : `${mm}/${s}~${mm}/${p}`);
+  return out.join("、");
+}
+function renderSummary(){
+  const dim = daysInMonth(yy,mm);
+  const withRest = $("sumRest").checked, onlyNZ = $("sumOnly").checked;
+  let html = "", shown=0;
+  for(const e of employees.filter(x=>x.active)){
+    const rec = getRec(e.emp_no, mm);
+    const byCode = {};
+    for(let d=1;d<=dim;d++){
+      const v = rec.days[d-1];
+      if(v==="" ) continue;
+      if(!isNaN(parseFloat(v))) continue;           // 上班不列
+      if(v==="休" && !withRest) continue;
+      (byCode[v] = byCode[v]||[]).push(d);
+    }
+    const codes = Object.keys(byCode);
+    const st = calcStats(rec, dim);
+    if(onlyNZ && !codes.length) continue;
+    shown++;
+    html += `<div class="sumcard"><div class="nm">${e.name}<small>工號 ${e.emp_no}｜上班 ${st.work}｜請假 ${st.leave}｜排休 ${st.off}${st.ot?`｜加班 ${st.ot}`:""}</small></div>`;
+    if(!codes.length) html += `<div class="sumempty">無勤缺紀錄</div>`;
+    for(const c of codes){
+      html += `<div class="sumline"><span class="tag c-${cssCode(c)}">${c} ${CODE_LABEL[c]||""}</span><span>${fmtRanges(byCode[c])}</span><span style="color:var(--sub)">共 ${byCode[c].length} 天</span></div>`;
+    }
+    html += `</div>`;
+  }
+  $("sumList").innerHTML = html;
+  $("sumNone").style.display = shown? "none":"block";
+}
+
+/* ================= 匯出 Excel ================= */
+function monthAOA(m){
+  const dim = daysInMonth(yy,m);
+  const rows = [];
+  rows.push([`新竹物流彰化轉運中心${yy}.${String(m).padStart(2,"0")}勤怠表`]);
+  const hd = ["序","姓名","工號","到職日"];
+  const wd2 = ["","","",""];
+  for(let d=1;d<=dim;d++){ hd.push(d); wd2.push(WD[wday(yy,m,d)]); }
+  hd.push("上班天數","請假天數","排休天數","加班天數");
+  rows.push(hd); rows.push(wd2);
+  for(const e of employees.filter(x=>x.active)){
+    const rec = records[key(e.emp_no,m)] || {days:Array(31).fill(""),overtime:0};
+    const st = calcStats(rec, dim);
+    const row = [e.seq===999?"":e.seq, e.name, e.emp_no, e.hire_date];
+    for(let d=1;d<=dim;d++){
+      const v = rec.days[d-1];
+      const f = parseFloat(v);
+      row.push(v===""? "" : (!isNaN(f)? f : v));
+    }
+    row.push(st.work, st.leave, st.off, st.ot);
+    rows.push(row);
+  }
+  return rows;
+}
+function styleSheet(ws, m){
+  const dim = daysInMonth(yy,m);
+  ws["!cols"] = [{wch:4},{wch:9},{wch:7},{wch:9}, ...Array(dim).fill({wch:3.5}), {wch:9},{wch:9},{wch:9},{wch:9}];
+  ws["!merges"] = [{s:{r:0,c:0}, e:{r:0,c:4+dim+3}}];
+}
+$("expMonth").onclick = ()=>{
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(monthAOA(mm));
+  styleSheet(ws, mm);
+  XLSX.utils.book_append_sheet(wb, ws, `${yy}.${String(mm).padStart(2,"0")}`);
+  XLSX.writeFile(wb, `彰化轉運中心${yy}年${mm}月出勤表.xlsx`);
+};
+$("expYear").onclick = ()=>{
+  const wb = XLSX.utils.book_new();
+  for(let m=1;m<=12;m++){
+    const ws = XLSX.utils.aoa_to_sheet(monthAOA(m));
+    styleSheet(ws, m);
+    XLSX.utils.book_append_sheet(wb, ws, `${yy}.${String(m).padStart(2,"0")}`);
+  }
+  XLSX.writeFile(wb, `彰化轉運中心${yy}年出勤表(全年).xlsx`);
+};
+
+/* ================= 名冊 ================= */
+$("rosterBtn").onclick = ()=>{ renderRoster(); $("roster").style.display="flex"; };
+function renderRoster(){
+  $("rosterBody").innerHTML = employees.map(e=>`
+    <tr class="${e.active?"":"inactive"}">
+      <td>${e.seq===999?"":e.seq}</td><td>${e.name}</td><td>${e.emp_no}</td><td>${e.hire_date}</td>
+      <td>${e.active?"在職":"停用"}</td>
+      <td><button class="mini" onclick="toggleEmp(${e.id},${!e.active})">${e.active?"停用":"復職"}</button></td>
+    </tr>`).join("");
+}
+window.toggleEmp = async (id, act)=>{
+  await fetch(`${SB_URL}/att_employees?id=eq.${id}`, {method:"PATCH", headers:H, body:JSON.stringify({active:act})});
+  const e = employees.find(x=>x.id===id); if(e) e.active=act;
+  renderRoster(); render();
+};
+$("addEmp").onclick = async ()=>{
+  const name=$("nName").value.trim(), no=$("nNo").value.trim();
+  if(!name||!no){ alert("姓名、工號必填"); return; }
+  const body = {seq:+($("nSeq").value)||999, name, emp_no:no, hire_date:$("nHire").value.trim()};
+  const res = await fetch(`${SB_URL}/att_employees`, {method:"POST", headers:{...H,"Prefer":"return=representation"}, body:JSON.stringify(body)});
+  if(!res.ok){ alert("新增失敗（工號可能重複）"); return; }
+  employees.push((await res.json())[0]);
+  employees.sort((a,b)=>(a.seq-b.seq)||a.emp_no.localeCompare(b.emp_no));
+  $("nSeq").value=$("nName").value=$("nNo").value=$("nHire").value="";
+  renderRoster(); render();
+};
+
+/* ================= 年份 ================= */
+(function(){
+  const sel = $("yearSel");
+  for(let y=115;y<=117;y++){ const o=document.createElement("option"); o.value=y; o.textContent=`民國${y}年`; sel.appendChild(o); }
+  sel.value = yy;
+  sel.onchange = ()=>{ yy=+sel.value; loadAll(); };
+})();
+
+loadAll();
+</script>
+</body>
+</html>
