@@ -115,9 +115,41 @@ tr:hover td.today{background:#fef08a;}
 #roster .inactive td{opacity:.45;}
 #roster .addrow input{background:#f0fdf4;}
 .mini{padding:4px 9px; font-size:12px; border-radius:6px;}
+/* ===== 手機版 ===== */
 @media (max-width:640px){
-  header h1{font-size:15px;}
-  th.sticky3,td.sticky3{display:none;}
+  body{font-size:13px; -webkit-tap-highlight-color:transparent;}
+  /* 頂欄：兩列緊湊 */
+  header{padding:8px 10px; gap:6px;}
+  header h1{font-size:15px; flex:1;}
+  header .spacer{display:none;}
+  #saveState{min-width:auto; font-size:11px; order:1;}
+  #yearSel{padding:5px 6px; font-size:12px;}
+  header button{padding:6px 9px; font-size:12.5px; border-radius:7px; flex:1; white-space:nowrap;}
+  #viewBtn,#rosterBtn,#expMonth,#expYear{order:2;}
+  /* 月份頁籤：單列橫滑 */
+  #monthTabs{flex-wrap:nowrap; overflow-x:auto; padding:8px 10px 0; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+  #monthTabs::-webkit-scrollbar{display:none;}
+  #monthTabs button{padding:6px 12px; border-radius:8px; border:1px solid var(--line); flex:0 0 auto;}
+  /* 圖例：單列橫滑 */
+  #legend{flex-wrap:nowrap; overflow-x:auto; padding:8px 10px; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+  #legend::-webkit-scrollbar{display:none;}
+  #legend .hint{display:none;}
+  .chip{flex:0 0 auto; font-size:12px; padding:5px 10px;}
+  /* 表格：序/工號欄隱藏，姓名貼左 */
+  #wrap{margin:0 8px 16px; max-height:calc(100vh - 176px); border-radius:8px;}
+  th.sticky1,td.sticky1,th.sticky3,td.sticky3{display:none;}
+  th.sticky2,td.sticky2{left:0; min-width:66px; font-size:12.5px; padding:0 4px; box-shadow:2px 0 4px rgba(0,0,0,.06);}
+  td.day{min-width:32px; height:34px;}
+  thead th.dnum{min-width:32px;}
+  td.stat{min-width:38px; font-size:12px;}
+  /* 選碼面板：底部抽屜、大按鈕好點 */
+  #palette{position:fixed; left:0!important; right:0; bottom:0; top:auto!important; width:100%; border-radius:18px 18px 0 0; padding:14px 14px calc(14px + env(safe-area-inset-bottom)); box-shadow:0 -8px 40px rgba(0,0,0,.3);}
+  #palette .grid{grid-template-columns:repeat(4,1fr); gap:8px;}
+  #palette .cell{padding:12px 2px; font-size:14px; border-radius:10px;}
+  #palette .who{font-size:14px; font-weight:bold; color:var(--txt); margin-bottom:10px;}
+  /* 彙總 */
+  #summary{margin:0 8px 16px;}
+  .sumcard{padding:10px 12px;}
 }
 </style>
 </head>
