@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>彰化轉運中心 出勤表</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>">
-<script src="xlsx.full.min.js"></script>
+<script src="xlsx.bundle.js"></script>
 <style>
 :root{
   --bg:#f4f6f9; --card:#fff; --line:#e2e8f0; --txt:#1e293b; --sub:#64748b;
@@ -660,8 +660,30 @@ function monthAOA(m){
 }
 function styleSheet(ws, m){
   const dim = daysInMonth(yy,m);
+  const lastCol = 4+dim+3;
   ws["!cols"] = [{wch:4},{wch:9},{wch:7},{wch:9}, ...Array(dim).fill({wch:3.5}), {wch:9},{wch:9},{wch:9},{wch:9}];
-  ws["!merges"] = [{s:{r:0,c:0}, e:{r:0,c:4+dim+3}}];
+  ws["!merges"] = [{s:{r:0,c:0}, e:{r:0,c:lastCol}}];
+  const range = XLSX.utils.decode_range(ws["!ref"]);
+  const center = {horizontal:"center", vertical:"center"};
+  const border = {top:{style:"thin",color:{rgb:"CBD5E1"}},bottom:{style:"thin",color:{rgb:"CBD5E1"}},left:{style:"thin",color:{rgb:"CBD5E1"}},right:{style:"thin",color:{rgb:"CBD5E1"}}};
+  for(let R=range.s.r; R<=range.e.r; R++){
+    const aCell = ws[XLSX.utils.encode_cell({r:R,c:0})];
+    const isUnitRow = aCell && typeof aCell.v==="string" && aCell.v.startsWith("▍");
+    if(isUnitRow) ws["!merges"].push({s:{r:R,c:0}, e:{r:R,c:lastCol}});
+    for(let C=range.s.c; C<=range.e.c; C++){
+      const cell = ws[XLSX.utils.encode_cell({r:R,c:C})];
+      if(!cell) continue;
+      if(R===0){          // 標題列
+        cell.s = {alignment:center, font:{name:"微軟正黑體", sz:14, bold:true}};
+      }else if(isUnitRow){ // 單位分組列：藍底白字
+        cell.s = {alignment:{horizontal:"left", vertical:"center"}, font:{name:"微軟正黑體", sz:11, bold:true, color:{rgb:"FFFFFF"}}, fill:{patternType:"solid", fgColor:{rgb:"1D4ED8"}}, border};
+      }else if(R===1 || R===2){ // 表頭兩列：灰底粗體
+        cell.s = {alignment:center, font:{name:"微軟正黑體", sz:10, bold:true}, fill:{patternType:"solid", fgColor:{rgb:"F1F5F9"}}, border};
+      }else{               // 資料列：全部置中
+        cell.s = {alignment:center, font:{name:"微軟正黑體", sz:10}, border};
+      }
+    }
+  }
 }
 $("expMonth").onclick = ()=>{
   const wb = XLSX.utils.book_new();
