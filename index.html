@@ -152,7 +152,6 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
 #printMenu{position:absolute; background:var(--card); border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,.25); padding:8px; display:none; z-index:70;}
 #printMenu button{display:block; width:100%; margin:3px 0; white-space:nowrap;}
 #printTitle{display:none;}
-.printNo{display:none;}
 /* ===== 列印版面 ===== */
 @media print{
   header,#monthTabs,#legend,#gate,#palette,#roster,#printMenu,#summary .opts label{display:none!important;}
@@ -178,8 +177,6 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
   td.day,thead th.dnum{min-width:20px!important; height:15px!important;}
   td.stat{min-width:24px!important;}
   tr.unitRow td{padding:3px 6px!important; font-size:10px!important; background:#1d4ed8!important; color:#fff!important; border-bottom:none!important;}
-  .printNo{display:inline!important; font-weight:normal; font-size:7px!important; color:#475569; margin-left:3px;}
-  th.sticky2,td.sticky2{min-width:64px!important;}
   tbody tr{page-break-inside:avoid;}
   .sumcard{page-break-inside:avoid; border-color:#cbd5e1;}
   td.day:hover{outline:none!important;}
@@ -517,7 +514,7 @@ function renderGrid(){
       const rec = getRec(e.emp_no, mm);
       const st = calcStats(rec, dim);
       body += `<tr><td class="sticky1" style="color:var(--sub)">${e.seq===999?"":e.seq}</td>
-        <td class="sticky2" title="到職 ${e.hire_date}｜${UNIT_LABEL[e.unit||""]}">${e.name}<span class="printNo">${e.emp_no}</span></td>
+        <td class="sticky2" title="到職 ${e.hire_date}｜${UNIT_LABEL[e.unit||""]}">${e.name}</td>
         <td class="sticky3" style="color:var(--sub);font-size:12px">${e.emp_no}</td>`;
       for(let d=1;d<=dim;d++){
         const v = rec.days[d-1];
