@@ -199,6 +199,7 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
   #legend::-webkit-scrollbar{display:none;}
   #legend .hint{display:none;}
   .chip{flex:0 0 auto; font-size:12px; padding:5px 10px;}
+  #fillBtn{flex:0 0 auto; font-size:12px;}
   #wrap{margin:0 8px 16px; max-height:calc(100vh - 176px); border-radius:8px;}
   th.sticky1,td.sticky1,th.sticky3,td.sticky3{display:none;}
   th.sticky2,td.sticky2{left:0; min-width:66px; font-size:12.5px; padding:0 4px; box-shadow:2px 0 4px rgba(0,0,0,.06);}
@@ -234,7 +235,7 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
 </div>
 
 <header>
-  <h1>📅 出勤表</h1>
+  <h1>📅 彰化轉運中心出勤表</h1>
   <span id="modeBadge"></span>
   <select id="yearSel"></select>
   <select id="unitSel">
@@ -265,6 +266,7 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
 
 <div id="legend">
   <span class="hint" id="legendHint">點格子選代碼；或先點下方「印章」再連續點格子快速填：</span>
+  <button id="fillBtn" class="adminOnly mini" title="把本月所有空格填入1(上班)">⚡ 空格填1</button>
 </div>
 
 <div id="wrap"><table id="grid"></table></div>
@@ -729,6 +731,23 @@ $("addEmp").onclick = async ()=>{
   sel.onchange = ()=>{ yy=+sel.value; loadAll(); };
   $("unitSel").onchange = ()=>{ unitFilter=$("unitSel").value; render(); };
 })();
+
+/* ================= 空格填1 ================= */
+$("fillBtn").onclick = ()=>{
+  if(!isAdmin) return;
+  const dim = daysInMonth(yy,mm);
+  const {actives} = visibleGroups();
+  if(!confirm(`將 ${yy}年${mm}月 目前顯示的 ${actives.length} 人所有空格填入「1」(上班)？\n已填的代碼不會被覆蓋。`)) return;
+  let n=0;
+  for(const e of actives){
+    const rec = getRec(e.emp_no, mm);
+    let changed = false;
+    for(let d=1; d<=dim; d++) if(rec.days[d-1]===""){ rec.days[d-1]="1"; changed=true; n++; }
+    if(changed) markDirty(e.emp_no, mm);
+  }
+  renderGrid();
+  if(!n) alert("本月沒有空格，未做任何變更。");
+};
 
 /* ================= 列印 ================= */
 $("printBtn").onclick = ev=>{
