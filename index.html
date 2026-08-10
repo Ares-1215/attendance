@@ -144,6 +144,43 @@ html[data-theme="dark"] .c-half{color:#2dd4bf;}
 #roster .inactive td{opacity:.45;}
 .mini{padding:4px 9px; font-size:12px; border-radius:6px;}
 body.viewonly .adminOnly{display:none!important;}
+/* ===== 單位分組 ===== */
+tr.unitRow td{background:var(--brand-light); color:var(--brand); font-weight:bold; text-align:left; padding:4px 8px; font-size:12.5px; border-bottom:2px solid var(--brand); position:sticky; left:0;}
+html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
+.unitTag{font-size:11px; padding:1px 7px; border-radius:8px; background:var(--brand-light); color:var(--brand); margin-left:6px; font-weight:normal; white-space:nowrap;}
+/* ===== 列印選單 ===== */
+#printMenu{position:absolute; background:var(--card); border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,.25); padding:8px; display:none; z-index:70;}
+#printMenu button{display:block; width:100%; margin:3px 0; white-space:nowrap;}
+#printTitle{display:none;}
+/* ===== 列印版面 ===== */
+@media print{
+  header,#monthTabs,#legend,#gate,#palette,#roster,#printMenu,#summary .opts label{display:none!important;}
+  /* 深色主題列印時強制轉白底 */
+  :root,html[data-theme="dark"]{
+    --bg:#fff; --card:#fff; --line:#cbd5e1; --txt:#000; --sub:#475569;
+    --brand:#1d4ed8; --brand-light:#eff6ff;
+    --wknd:#fff7ed; --today:#fef9c3; --wkndH:#ffedd5; --wkndHt:#c2410c; --todayHt:#a16207;
+    --head:#f1f5f9; --footbg:#eef2ff; --hover:#fff; --wkndHover:#fff7ed; --todayHover:#fef9c3;
+  }
+  *{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  body{background:#fff;}
+  #printTitle{display:block!important; text-align:center; font-size:15px; font-weight:bold; margin:0 0 2mm;}
+  #printTitle small{font-weight:normal; font-size:10px; color:var(--sub); margin-left:8px;}
+  #wrap{max-height:none!important; overflow:visible!important; margin:0!important; border:none!important; border-radius:0!important;}
+  #summary{margin:0!important;}
+  table{width:100%;}
+  th,td{font-size:8.5px!important; padding:0!important;}
+  thead th,th.sticky1,td.sticky1,th.sticky2,td.sticky2,th.sticky3,td.sticky3,tfoot td{position:static!important; box-shadow:none!important;}
+  th.sticky1,td.sticky1{min-width:14px!important; display:table-cell!important;}
+  th.sticky2,td.sticky2{min-width:44px!important; display:table-cell!important; padding:0 2px!important;}
+  th.sticky3,td.sticky3{min-width:26px!important; display:table-cell!important;}
+  td.day,thead th.dnum{min-width:20px!important; height:15px!important;}
+  td.stat{min-width:24px!important;}
+  tr.unitRow td{padding:2px 4px!important; font-size:9px!important;}
+  tbody tr{page-break-inside:avoid;}
+  .sumcard{page-break-inside:avoid; border-color:#cbd5e1;}
+  td.day:hover{outline:none!important;}
+}
 /* ===== 手機版 ===== */
 @media (max-width:640px){
   body{font-size:13px; -webkit-tap-highlight-color:transparent;}
@@ -151,9 +188,9 @@ body.viewonly .adminOnly{display:none!important;}
   header h1{font-size:15px; flex:1;}
   header .spacer{display:none;}
   #saveState{min-width:auto; font-size:11px; order:1;}
-  #yearSel{padding:5px 6px; font-size:12px;}
+  #yearSel,#unitSel{padding:5px 6px; font-size:12px;}
   header button{padding:6px 9px; font-size:12.5px; border-radius:7px; flex:1; white-space:nowrap;}
-  #themeBtn,#logoutBtn{flex:0 0 auto;}
+  #themeBtn,#logoutBtn,#printBtn{flex:0 0 auto;}
   #viewBtn,#rosterBtn,#expMonth,#expYear{order:2;}
   #monthTabs{flex-wrap:nowrap; overflow-x:auto; padding:8px 10px 0; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
   #monthTabs::-webkit-scrollbar{display:none;}
@@ -200,15 +237,29 @@ body.viewonly .adminOnly{display:none!important;}
   <h1>📅 出勤表</h1>
   <span id="modeBadge"></span>
   <select id="yearSel"></select>
+  <select id="unitSel">
+    <option value="all">全部單位</option>
+    <option value="發送">發送</option>
+    <option value="到著">到著</option>
+    <option value="冷鏈">冷鏈(低溫)</option>
+    <option value="籠車">籠車</option>
+  </select>
   <button id="viewBtn">📋 彙總檢視</button>
   <span class="spacer"></span>
   <span id="saveState" class="adminOnly"></span>
   <button id="themeBtn" title="切換深淺主題">🌓</button>
+  <button id="printBtn" title="列印">🖨 列印</button>
   <button id="rosterBtn">👥 名冊</button>
   <button id="expMonth" class="primary">⬇ 匯出本月</button>
   <button id="expYear">⬇ 匯出全年</button>
   <button id="logoutBtn" title="登出">⎋</button>
 </header>
+
+<div id="printMenu">
+  <button onclick="doPrint('A4')">📄 A4 橫向列印</button>
+  <button onclick="doPrint('A3')">📄 A3 橫向列印</button>
+</div>
+<div id="printTitle"></div>
 
 <div id="monthTabs"></div>
 
@@ -237,13 +288,14 @@ body.viewonly .adminOnly{display:none!important;}
   <div class="panel">
     <h2>👥 員工名冊 <button class="mini" style="float:right" onclick="document.getElementById('roster').style.display='none'">✕ 關閉</button></h2>
     <table>
-      <thead><tr><th>序</th><th>姓名</th><th>工號</th><th>到職日</th><th>狀態</th><th class="adminOnly"></th></tr></thead>
+      <thead><tr><th>序</th><th>姓名</th><th>工號</th><th>單位</th><th>到職日</th><th>狀態</th><th class="adminOnly"></th></tr></thead>
       <tbody id="rosterBody"></tbody>
       <tbody class="adminOnly">
         <tr class="addrow">
           <td><input id="nSeq" style="width:44px" placeholder="序"></td>
           <td><input id="nName" placeholder="姓名"></td>
           <td><input id="nNo" placeholder="工號"></td>
+          <td><select id="nUnit"><option value="">未分類</option><option>發送</option><option>到著</option><option>冷鏈</option><option>籠車</option></select></td>
           <td><input id="nHire" placeholder="115/8/1"></td>
           <td colspan="2"><button class="mini primary" id="addEmp">＋新增</button></td>
         </tr>
@@ -264,11 +316,14 @@ const CODES = ["1","0.5","休","特","病","事","家","公","婚","喪","生理
 const CODE_LABEL = {"1":"上班","0.5":"半天","休":"排休","特":"特休","病":"病假","事":"事假","家":"家庭","公":"公假","婚":"婚假","喪":"喪假","生理":"生理","教育":"教育","產":"產假","陪產":"陪產","產檢":"產檢","職傷":"職傷","職災":"職災","留停":"留停","X":"X","":"清空"};
 const LEAVE_SET = new Set(["特","事","家","病","生理","公","教育","職災","職傷","產","陪產","產檢","婚","喪"]);
 const WD = ["日","一","二","三","四","五","六"];
+const UNITS = ["發送","到著","冷鏈","籠車"];
+const UNIT_LABEL = {"發送":"彰化發送單位","到著":"彰化到著單位","冷鏈":"彰化冷鏈(低溫)單位","籠車":"彰化籠車單位","":"未分類"};
 
 /* ================= 狀態 ================= */
 let employees = [];
 let records = {};
 let yy = 115, mm = (new Date().getMonth()+1);
+let unitFilter = "all";
 let stamp = null, palTarget = null;
 const dirty = new Set(); let saveTimer = null;
 let isAdmin = false, adminToken = "";
@@ -281,6 +336,15 @@ function getRec(emp_no, m){
   const k = key(emp_no, m);
   if(!records[k]) records[k] = {days:Array(31).fill(""), overtime:0};
   return records[k];
+}
+function visibleGroups(){
+  const actives = employees.filter(e=>e.active && (unitFilter==="all" || (e.unit||"")===unitFilter));
+  const groups = [];
+  for(const u of [...UNITS, ""]){
+    const list = actives.filter(e=>(e.unit||"")===u);
+    if(list.length) groups.push({unit:u, list});
+  }
+  return {actives, groups};
 }
 
 /* ================= 主題 ================= */
@@ -441,21 +505,26 @@ function renderGrid(){
   h2 += `<th colspan="4" style="font-size:10px">天數統計</th></tr>`;
 
   let body = "";
-  const actives = employees.filter(e=>e.active);
-  for(const e of actives){
-    const rec = getRec(e.emp_no, mm);
-    const st = calcStats(rec, dim);
-    body += `<tr><td class="sticky1" style="color:var(--sub)">${e.seq===999?"":e.seq}</td>
-      <td class="sticky2" title="到職 ${e.hire_date}">${e.name}</td>
-      <td class="sticky3" style="color:var(--sub);font-size:12px">${e.emp_no}</td>`;
-    for(let d=1;d<=dim;d++){
-      const v = rec.days[d-1];
-      const w = wday(yy,mm,d);
-      const cls = ["day", v?("c-"+cssCode(v)):"", d===td?"today":(w===0||w===6)?"wknd":""].join(" ");
-      body += `<td class="${cls}" data-e="${e.emp_no}" data-d="${d}">${v}</td>`;
+  const {actives, groups} = visibleGroups();
+  const totalCols = 3 + dim + 4;
+  for(const g of groups){
+    if(unitFilter==="all" && groups.length>1)
+      body += `<tr class="unitRow"><td colspan="${totalCols}">▍${UNIT_LABEL[g.unit]}（${g.list.length}人）</td></tr>`;
+    for(const e of g.list){
+      const rec = getRec(e.emp_no, mm);
+      const st = calcStats(rec, dim);
+      body += `<tr><td class="sticky1" style="color:var(--sub)">${e.seq===999?"":e.seq}</td>
+        <td class="sticky2" title="到職 ${e.hire_date}｜${UNIT_LABEL[e.unit||""]}">${e.name}</td>
+        <td class="sticky3" style="color:var(--sub);font-size:12px">${e.emp_no}</td>`;
+      for(let d=1;d<=dim;d++){
+        const v = rec.days[d-1];
+        const w = wday(yy,mm,d);
+        const cls = ["day", v?("c-"+cssCode(v)):"", d===td?"today":(w===0||w===6)?"wknd":""].join(" ");
+        body += `<td class="${cls}" data-e="${e.emp_no}" data-d="${d}">${v}</td>`;
+      }
+      body += `<td class="stat work">${st.work||""}</td><td class="stat leave">${st.leave||""}</td>
+               <td class="stat off">${st.off||""}</td><td class="stat ot">${st.ot||""}</td></tr>`;
     }
-    body += `<td class="stat work">${st.work||""}</td><td class="stat leave">${st.leave||""}</td>
-             <td class="stat off">${st.off||""}</td><td class="stat ot">${st.ot||""}</td></tr>`;
   }
   let foot = `<tr><td class="sticky1"></td><td class="sticky2">當日上班人數</td><td class="sticky3"></td>`;
   for(let d=1;d<=dim;d++){
@@ -529,26 +598,31 @@ function renderSummary(){
   const dim = daysInMonth(yy,mm);
   const withRest = $("sumRest").checked, onlyNZ = $("sumOnly").checked;
   let html = "", shown=0;
-  for(const e of employees.filter(x=>x.active)){
-    const rec = getRec(e.emp_no, mm);
-    const byCode = {};
-    for(let d=1;d<=dim;d++){
-      const v = rec.days[d-1];
-      if(v==="" ) continue;
-      if(!isNaN(parseFloat(v))) continue;
-      if(v==="休" && !withRest) continue;
-      (byCode[v] = byCode[v]||[]).push(d);
+  const {groups} = visibleGroups();
+  for(const g of groups){
+    let unitHtml = "", unitShown = 0;
+    for(const e of g.list){
+      const rec = getRec(e.emp_no, mm);
+      const byCode = {};
+      for(let d=1;d<=dim;d++){
+        const v = rec.days[d-1];
+        if(v==="" ) continue;
+        if(!isNaN(parseFloat(v))) continue;
+        if(v==="休" && !withRest) continue;
+        (byCode[v] = byCode[v]||[]).push(d);
+      }
+      const codes = Object.keys(byCode);
+      const st = calcStats(rec, dim);
+      if(onlyNZ && !codes.length) continue;
+      unitShown++; shown++;
+      unitHtml += `<div class="sumcard"><div class="nm">${e.name}<span class="unitTag">${UNIT_LABEL[e.unit||""]}</span><small>工號 ${e.emp_no}｜上班 ${st.work}｜請假 ${st.leave}｜排休 ${st.off}${st.ot?`｜加班 ${st.ot}`:""}</small></div>`;
+      if(!codes.length) unitHtml += `<div class="sumempty">無勤缺紀錄</div>`;
+      for(const c of codes){
+        unitHtml += `<div class="sumline"><span class="tag c-${cssCode(c)}">${c} ${CODE_LABEL[c]||""}</span><span>${fmtRanges(byCode[c])}</span><span style="color:var(--sub)">共 ${byCode[c].length} 天</span></div>`;
+      }
+      unitHtml += `</div>`;
     }
-    const codes = Object.keys(byCode);
-    const st = calcStats(rec, dim);
-    if(onlyNZ && !codes.length) continue;
-    shown++;
-    html += `<div class="sumcard"><div class="nm">${e.name}<small>工號 ${e.emp_no}｜上班 ${st.work}｜請假 ${st.leave}｜排休 ${st.off}${st.ot?`｜加班 ${st.ot}`:""}</small></div>`;
-    if(!codes.length) html += `<div class="sumempty">無勤缺紀錄</div>`;
-    for(const c of codes){
-      html += `<div class="sumline"><span class="tag c-${cssCode(c)}">${c} ${CODE_LABEL[c]||""}</span><span>${fmtRanges(byCode[c])}</span><span style="color:var(--sub)">共 ${byCode[c].length} 天</span></div>`;
-    }
-    html += `</div>`;
+    if(unitShown) html += `<div style="font-weight:bold;color:var(--brand);margin:12px 0 6px">▍${UNIT_LABEL[g.unit]}</div>` + unitHtml;
   }
   $("sumList").innerHTML = html;
   $("sumNone").style.display = shown? "none":"block";
@@ -564,17 +638,21 @@ function monthAOA(m){
   for(let d=1;d<=dim;d++){ hd.push(d); wd2.push(WD[wday(yy,m,d)]); }
   hd.push("上班天數","請假天數","排休天數","加班天數");
   rows.push(hd); rows.push(wd2);
-  for(const e of employees.filter(x=>x.active)){
-    const rec = records[key(e.emp_no,m)] || {days:Array(31).fill(""),overtime:0};
-    const st = calcStats(rec, dim);
-    const row = [e.seq===999?"":e.seq, e.name, e.emp_no, e.hire_date];
-    for(let d=1;d<=dim;d++){
-      const v = rec.days[d-1];
-      const f = parseFloat(v);
-      row.push(v===""? "" : (!isNaN(f)? f : v));
+  const {groups} = visibleGroups();
+  for(const g of groups){
+    if(groups.length>1) rows.push([`▍${UNIT_LABEL[g.unit]}（${g.list.length}人）`]);
+    for(const e of g.list){
+      const rec = records[key(e.emp_no,m)] || {days:Array(31).fill(""),overtime:0};
+      const st = calcStats(rec, dim);
+      const row = [e.seq===999?"":e.seq, e.name, e.emp_no, e.hire_date];
+      for(let d=1;d<=dim;d++){
+        const v = rec.days[d-1];
+        const f = parseFloat(v);
+        row.push(v===""? "" : (!isNaN(f)? f : v));
+      }
+      row.push(st.work, st.leave, st.off, st.ot);
+      rows.push(row);
     }
-    row.push(st.work, st.leave, st.off, st.ot);
-    rows.push(row);
   }
   return rows;
 }
@@ -603,13 +681,24 @@ $("expYear").onclick = ()=>{
 /* ================= 名冊 ================= */
 $("rosterBtn").onclick = ()=>{ renderRoster(); $("roster").style.display="flex"; };
 function renderRoster(){
+  const unitCell = e => isAdmin
+    ? `<select onchange="setUnit(${e.id},this.value)">${["","發送","到著","冷鏈","籠車"].map(u=>`<option value="${u}" ${((e.unit||"")===u)?"selected":""}>${u===""?"未分類":u}</option>`).join("")}</select>`
+    : (e.unit||"未分類");
   $("rosterBody").innerHTML = employees.map(e=>`
     <tr class="${e.active?"":"inactive"}">
-      <td>${e.seq===999?"":e.seq}</td><td>${e.name}</td><td>${e.emp_no}</td><td>${e.hire_date}</td>
+      <td>${e.seq===999?"":e.seq}</td><td>${e.name}${e.note?` <span class="unitTag" title="${e.note}">備註</span>`:""}</td><td>${e.emp_no}</td>
+      <td>${unitCell(e)}</td><td>${e.hire_date}</td>
       <td>${e.active?"在職":"停用"}</td>
       <td class="adminOnly"><button class="mini" onclick="toggleEmp(${e.id},${!e.active})">${e.active?"停用":"復職"}</button></td>
     </tr>`).join("");
 }
+window.setUnit = async (id, u)=>{
+  if(!isAdmin) return;
+  const j = await fnCall({action:"patch_employee", id, fields:{unit:u}});
+  if(!j.ok){ alert("更新失敗："+(j.error||"")); return; }
+  const e = employees.find(x=>x.id===id); if(e) e.unit=u;
+  render();
+};
 async function fnCall(payload){
   const res = await fetch(FN_URL, {method:"POST", headers:H, body:JSON.stringify({...payload, token:adminToken})});
   return res.json();
@@ -624,21 +713,46 @@ window.toggleEmp = async (id, act)=>{
 $("addEmp").onclick = async ()=>{
   const name=$("nName").value.trim(), no=$("nNo").value.trim();
   if(!name||!no){ alert("姓名、工號必填"); return; }
-  const j = await fnCall({action:"add_employee", seq:+($("nSeq").value)||999, name, emp_no:no, hire_date:$("nHire").value.trim()});
+  const j = await fnCall({action:"add_employee", seq:+($("nSeq").value)||999, name, emp_no:no, hire_date:$("nHire").value.trim(), unit:$("nUnit").value});
   if(!j.ok){ alert("新增失敗："+(j.error||"工號可能重複")); return; }
   employees.push(j.employee);
   employees.sort((a,b)=>(a.seq-b.seq)||a.emp_no.localeCompare(b.emp_no));
-  $("nSeq").value=$("nName").value=$("nNo").value=$("nHire").value="";
+  $("nSeq").value=$("nName").value=$("nNo").value=$("nHire").value=""; $("nUnit").value="";
   renderRoster(); render();
 };
 
-/* ================= 年份 ================= */
+/* ================= 年份 / 單位篩選 ================= */
 (function(){
   const sel = $("yearSel");
   for(let y=115;y<=117;y++){ const o=document.createElement("option"); o.value=y; o.textContent=`民國${y}年`; sel.appendChild(o); }
   sel.value = yy;
   sel.onchange = ()=>{ yy=+sel.value; loadAll(); };
+  $("unitSel").onchange = ()=>{ unitFilter=$("unitSel").value; render(); };
 })();
+
+/* ================= 列印 ================= */
+$("printBtn").onclick = ev=>{
+  ev.stopPropagation();
+  const menu = $("printMenu");
+  const show = menu.style.display!=="block";
+  menu.style.display = show?"block":"none";
+  if(show){
+    const r = $("printBtn").getBoundingClientRect();
+    menu.style.top = (r.bottom + window.scrollY + 4)+"px";
+    menu.style.left = Math.min(r.left + window.scrollX, window.innerWidth-170)+"px";
+  }
+};
+document.addEventListener("click", e=>{ if(!$("printMenu").contains(e.target) && e.target.id!=="printBtn") $("printMenu").style.display="none"; });
+window.doPrint = size=>{
+  $("printMenu").style.display="none";
+  let st = $("pageStyle");
+  if(!st){ st=document.createElement("style"); st.id="pageStyle"; document.head.appendChild(st); }
+  st.textContent = `@page{size:${size} landscape; margin:8mm;}`;
+  const uTxt = unitFilter==="all" ? "" : `（${UNIT_LABEL[unitFilter]}）`;
+  const now = new Date();
+  $("printTitle").innerHTML = `新竹物流彰化轉運中心 ${yy}.${String(mm).padStart(2,"0")} 勤怠表${uTxt}<small>列印：${now.getFullYear()-1911}/${now.getMonth()+1}/${now.getDate()}</small>`;
+  window.print();
+};
 </script>
 </body>
 </html>
