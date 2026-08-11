@@ -134,6 +134,18 @@ html[data-theme="dark"] .c-half{color:#2dd4bf;}
 .sumline .tag{padding:2px 10px; border-radius:10px; font-weight:bold; font-size:12.5px; white-space:nowrap;}
 .sumempty{color:#16a34a; font-size:13.5px;}
 #sumNone{background:var(--card); border:1px dashed var(--line); border-radius:10px; padding:30px; text-align:center; color:var(--sub); display:none;}
+/* ===== 統計 ===== */
+#stats{margin:0 16px 24px; display:none;}
+#stats .opts{margin-bottom:10px; display:flex; gap:14px; align-items:center; font-size:13px; color:var(--sub); flex-wrap:wrap;}
+#statsWrap{background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:auto; max-height:calc(100vh - 240px);}
+#statsGrid td, #statsGrid th{padding:5px 8px; min-width:44px;}
+#statsGrid td.sticky2{min-width:76px;}
+#statsGrid .neg{color:#dc2626; font-weight:bold;}
+html[data-theme="dark"] #statsGrid .neg{color:#f87171;}
+#statsGrid .quota input{width:54px; text-align:center; font-family:inherit; font-size:13px; border:1px solid var(--line); border-radius:6px; padding:3px 4px; background:var(--card); color:var(--txt);}
+#statsGrid td.hl{font-weight:bold;}
+#statsGrid tfoot td{background:var(--footbg); color:var(--brand); font-weight:bold; padding:6px 8px;}
+.statNote{font-size:12px; color:var(--sub); margin-top:8px;}
 /* ===== 名冊 ===== */
 #roster{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:flex-start; justify-content:center; z-index:60; padding:5vh 12px;}
 #roster .panel{background:var(--card); border-radius:14px; width:min(96vw,640px); max-height:90vh; overflow:auto; padding:20px;}
@@ -154,7 +166,7 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
 #printTitle{display:none;}
 /* ===== 列印版面 ===== */
 @media print{
-  header,#monthTabs,#legend,#gate,#palette,#roster,#printMenu,#summary .opts label{display:none!important;}
+  header,#monthTabs,#legend,#gate,#palette,#roster,#printMenu,#summary .opts label,#stats .opts label,#stats .opts button{display:none!important;}
   /* 深色主題列印時強制轉白底 */
   :root,html[data-theme="dark"]{
     --bg:#fff; --card:#fff; --line:#cbd5e1; --txt:#000; --sub:#475569;
@@ -166,8 +178,8 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
   body{background:#fff;}
   #printTitle{display:block!important; text-align:center; font-size:15px; font-weight:bold; margin:0 0 2mm;}
   #printTitle small{font-weight:normal; font-size:10px; color:var(--sub); margin-left:8px;}
-  #wrap{max-height:none!important; overflow:visible!important; margin:0!important; border:none!important; border-radius:0!important;}
-  #summary{margin:0!important;}
+  #wrap,#statsWrap{max-height:none!important; overflow:visible!important; margin:0!important; border:none!important; border-radius:0!important;}
+  #summary,#stats{margin:0!important;}
   table{width:100%;}
   th,td{font-size:8.5px!important; padding:0!important;}
   thead th,th.sticky1,td.sticky1,th.sticky2,td.sticky2,th.sticky3,td.sticky3,tfoot td{position:static!important; box-shadow:none!important;}
@@ -212,6 +224,9 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
   #palette .who{font-size:14px; font-weight:bold; color:var(--txt); margin-bottom:10px;}
   #summary{margin:0 8px 16px;}
   .sumcard{padding:10px 12px;}
+  #stats{margin:0 8px 16px;}
+  #statsWrap{max-height:calc(100vh - 210px);}
+  #statsGrid td,#statsGrid th{padding:4px 5px; min-width:38px; font-size:12px;}
 }
 </style>
 </head>
@@ -246,6 +261,7 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
     <option value="籠車">籠車</option>
   </select>
   <button id="viewBtn">📋 彙總檢視</button>
+  <button id="statsBtn">📊 統計</button>
   <span class="spacer"></span>
   <span id="saveState" class="adminOnly"></span>
   <button id="themeBtn" title="切換深淺主題">🌓</button>
@@ -279,6 +295,16 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
   </div>
   <div id="sumList"></div>
   <div id="sumNone">🎉 本月全員無請假紀錄</div>
+</div>
+
+<div id="stats">
+  <div class="opts">
+    <b style="color:var(--txt)">📊 年度請假統計</b><span id="statScope"></span>
+    <label><input type="checkbox" id="statFuture"> 含未來已排定</label>
+    <button id="expStats" class="mini primary">⬇ 匯出統計</button>
+  </div>
+  <div id="statsWrap"><table id="statsGrid"></table></div>
+  <p class="statNote">合計＝14 種假別加總（特病事家公婚喪生理教育產陪產產檢職傷職災）；留停另計不入合計。剩餘特休＝額度−已請特休。</p>
 </div>
 
 <div id="palette">
@@ -459,9 +485,23 @@ function calcStats(rec, dim){
 }
 
 /* ================= 主表 ================= */
+let view = "grid";
+function setView(v){
+  view = v;
+  $("wrap").style.display    = v==="grid" ? "block" : "none";
+  $("summary").style.display = v==="sum"  ? "block" : "none";
+  $("stats").style.display   = v==="stats"? "block" : "none";
+  $("monthTabs").style.display = v==="stats" ? "none" : "flex";
+  $("legend").style.display    = v==="stats" ? "none" : "flex";
+  $("viewBtn").textContent  = v==="sum"   ? "📅 格子檢視" : "📋 彙總檢視";
+  $("statsBtn").textContent = v==="stats" ? "📅 格子檢視" : "📊 統計";
+  render();
+}
 function render(){
   renderTabs(); renderLegend();
-  if($("summary").style.display==="block") renderSummary(); else renderGrid();
+  if(view==="sum") renderSummary();
+  else if(view==="stats") renderStats();
+  else renderGrid();
 }
 function renderTabs(){
   $("monthTabs").innerHTML = Array.from({length:12},(_,i)=>
@@ -574,17 +614,12 @@ function setCell(emp_no, d, v){
   renderGrid();
 }
 
-/* ================= 彙總檢視 ================= */
-$("viewBtn").onclick = ()=>{
-  const sum = $("summary"), wrap = $("wrap");
-  const showSum = sum.style.display!=="block";
-  sum.style.display = showSum?"block":"none";
-  wrap.style.display = showSum?"none":"block";
-  $("viewBtn").textContent = showSum? "📅 格子檢視" : "📋 彙總檢視";
-  render();
-};
+/* ================= 檢視切換 ================= */
+$("viewBtn").onclick  = ()=> setView(view==="sum"  ? "grid" : "sum");
+$("statsBtn").onclick = ()=> setView(view==="stats"? "grid" : "stats");
 $("sumRest").onchange = renderSummary;
 $("sumOnly").onchange = renderSummary;
+$("statFuture").onchange = renderStats;
 
 function fmtRanges(list){
   const out=[]; let s=null,p=null;
@@ -629,6 +664,147 @@ function renderSummary(){
   $("sumList").innerHTML = html;
   $("sumNone").style.display = shown? "none":"block";
 }
+
+/* ================= 年度請假統計 ================= */
+const LEAVE_COLS = ["特","病","事","家","公","婚","喪","生理","教育","產","陪產","產檢","職傷","職災"];
+function leaveTally(){
+  // 回傳 {emp_no: {code:天數, _留停:天數}}，範圍=全年累計至今(或含未來)
+  const now = new Date();
+  const curY = now.getFullYear()-1911, curM = now.getMonth()+1, curD = now.getDate();
+  const incFuture = $("statFuture").checked;
+  const tally = {};
+  for(const e of employees){
+    const t = {};
+    for(let m=1;m<=12;m++){
+      const rec = records[`${e.emp_no}_${yy}_${m}`];
+      if(!rec) continue;
+      const dim = daysInMonth(yy,m);
+      let last = dim;
+      if(!incFuture && yy===curY){
+        if(m>curM) last = 0;
+        else if(m===curM) last = curD;
+      }
+      if(!incFuture && yy>curY) last = 0;
+      for(let d=1;d<=last;d++){
+        const v = rec.days[d-1];
+        if(LEAVE_SET.has(v) || v==="留停") t[v]=(t[v]||0)+1;
+      }
+    }
+    tally[e.emp_no]=t;
+  }
+  return tally;
+}
+function statCols(tally, list){
+  // 有人請過的假別才顯示欄位；特休恆顯示
+  const used = new Set(["特"]);
+  for(const e of list) for(const c of Object.keys(tally[e.emp_no]||{})) if(c!=="留停") used.add(c);
+  return LEAVE_COLS.filter(c=>used.has(c));
+}
+function renderStats(){
+  const now = new Date();
+  const curY = now.getFullYear()-1911;
+  $("statScope").textContent = `（民國${yy}年 1/1 ~ ${$("statFuture").checked||yy!==curY ? "12/31" : `${now.getMonth()+1}/${now.getDate()}`}）`;
+  const tally = leaveTally();
+  const {groups} = visibleGroups();
+  const all = groups.flatMap(g=>g.list);
+  const cols = statCols(tally, all);
+  const showLT = all.some(e=>(tally[e.emp_no]||{})["留停"]);
+  const nCols = 3+3+cols.length-1+1+(showLT?1:0); // 序姓名工號+額度已請剩餘+其餘假別+合計(+留停)
+
+  let h = `<thead><tr><th class="sticky1">序</th><th class="sticky2">姓名</th><th class="sticky3">工號</th>
+    <th>特休額度</th><th>已請特休</th><th>剩餘特休</th>`;
+  for(const c of cols) if(c!=="特") h += `<th>${CODE_LABEL[c]||c}</th>`;
+  h += `<th>請假合計</th>`;
+  if(showLT) h += `<th>留停</th>`;
+  h += `</tr></thead>`;
+
+  const tot = {}; let totQ=0, totUsed=0, totSum=0, totLT=0;
+  let body = "";
+  for(const g of groups){
+    if(unitFilter==="all" && groups.length>1)
+      body += `<tr class="unitRow"><td colspan="${nCols}">▍${UNIT_LABEL[g.unit]}（${g.list.length}人）</td></tr>`;
+    for(const e of g.list){
+      const t = tally[e.emp_no]||{};
+      const q = +e.annual_quota||0, used = t["特"]||0, left = +(q-used).toFixed(1);
+      let sum = 0; for(const c of LEAVE_COLS) sum += t[c]||0;
+      totQ+=q; totUsed+=used; totSum+=sum; totLT+=t["留停"]||0;
+      for(const c of cols) tot[c]=(tot[c]||0)+(t[c]||0);
+      const qCell = isAdmin
+        ? `<td class="quota"><input type="number" min="0" step="0.5" value="${q||""}" placeholder="0" onchange="setQuota(${e.id},this.value)"></td>`
+        : `<td>${q||""}</td>`;
+      body += `<tr><td class="sticky1" style="color:var(--sub)">${e.seq===999?"":e.seq}</td>
+        <td class="sticky2">${e.name}</td>
+        <td class="sticky3" style="color:var(--sub);font-size:12px">${e.emp_no}</td>
+        ${qCell}<td>${used||""}</td><td class="${left<0?"neg":""}">${q?left:""}</td>`;
+      for(const c of cols) if(c!=="特") body += `<td>${t[c]||""}</td>`;
+      body += `<td class="hl">${sum||""}</td>`;
+      if(showLT) body += `<td>${t["留停"]||""}</td>`;
+      body += `</tr>`;
+    }
+  }
+  let foot = `<tfoot><tr><td class="sticky1"></td><td class="sticky2">合計</td><td class="sticky3"></td>
+    <td>${totQ||""}</td><td>${totUsed||""}</td><td></td>`;
+  for(const c of cols) if(c!=="特") foot += `<td>${tot[c]||""}</td>`;
+  foot += `<td>${totSum||""}</td>`;
+  if(showLT) foot += `<td>${totLT||""}</td>`;
+  foot += `</tr></tfoot>`;
+  $("statsGrid").innerHTML = h + `<tbody>${body}</tbody>` + foot;
+}
+window.setQuota = async (id, v)=>{
+  if(!isAdmin) return;
+  const j = await fnCall({action:"patch_employee", id, fields:{annual_quota:+v||0}});
+  if(!j.ok){ alert("額度儲存失敗："+(j.error||"")); return; }
+  const e = employees.find(x=>x.id===id); if(e) e.annual_quota=+v||0;
+  renderStats();
+};
+$("expStats").onclick = ()=>{
+  const tally = leaveTally();
+  const {groups} = visibleGroups();
+  const all = groups.flatMap(g=>g.list);
+  const cols = statCols(tally, all);
+  const showLT = all.some(e=>(tally[e.emp_no]||{})["留停"]);
+  const rows = [];
+  rows.push([`彰化轉運中心 ${yy}年 請假統計 ${$("statScope").textContent}`]);
+  const hd = ["序","姓名","工號","特休額度","已請特休","剩餘特休"];
+  for(const c of cols) if(c!=="特") hd.push(CODE_LABEL[c]||c);
+  hd.push("請假合計"); if(showLT) hd.push("留停");
+  rows.push(hd);
+  for(const g of groups){
+    if(groups.length>1) rows.push([`▍${UNIT_LABEL[g.unit]}（${g.list.length}人）`]);
+    for(const e of g.list){
+      const t = tally[e.emp_no]||{};
+      const q = +e.annual_quota||0, used = t["特"]||0;
+      let sum=0; for(const c of LEAVE_COLS) sum += t[c]||0;
+      const row = [e.seq===999?"":e.seq, e.name, e.emp_no, q||"", used||"", q?+(q-used).toFixed(1):""];
+      for(const c of cols) if(c!=="特") row.push(t[c]||"");
+      row.push(sum||""); if(showLT) row.push(t["留停"]||"");
+      rows.push(row);
+    }
+  }
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const lastCol = rows[1].length-1;
+  ws["!cols"] = [{wch:4},{wch:9},{wch:7}, ...Array(lastCol-2).fill({wch:8})];
+  ws["!merges"] = [{s:{r:0,c:0}, e:{r:0,c:lastCol}}];
+  const range = XLSX.utils.decode_range(ws["!ref"]);
+  const center = {horizontal:"center", vertical:"center"};
+  const border = {top:{style:"thin",color:{rgb:"CBD5E1"}},bottom:{style:"thin",color:{rgb:"CBD5E1"}},left:{style:"thin",color:{rgb:"CBD5E1"}},right:{style:"thin",color:{rgb:"CBD5E1"}}};
+  for(let R=range.s.r; R<=range.e.r; R++){
+    const aCell = ws[XLSX.utils.encode_cell({r:R,c:0})];
+    const isUnitRow = aCell && typeof aCell.v==="string" && aCell.v.startsWith("▍");
+    if(isUnitRow) ws["!merges"].push({s:{r:R,c:0}, e:{r:R,c:lastCol}});
+    for(let C=range.s.c; C<=range.e.c; C++){
+      const cell = ws[XLSX.utils.encode_cell({r:R,c:C})];
+      if(!cell) continue;
+      if(R===0) cell.s = {alignment:center, font:{name:"微軟正黑體", sz:14, bold:true}};
+      else if(isUnitRow) cell.s = {alignment:{horizontal:"left", vertical:"center"}, font:{name:"微軟正黑體", sz:11, bold:true, color:{rgb:"FFFFFF"}}, fill:{patternType:"solid", fgColor:{rgb:"1D4ED8"}}, border};
+      else if(R===1) cell.s = {alignment:center, font:{name:"微軟正黑體", sz:10, bold:true}, fill:{patternType:"solid", fgColor:{rgb:"F1F5F9"}}, border};
+      else cell.s = {alignment:center, font:{name:"微軟正黑體", sz:10}, border};
+    }
+  }
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, `${yy}年請假統計`);
+  XLSX.writeFile(wb, `彰化轉運中心${yy}年請假統計.xlsx`);
+};
 
 /* ================= 匯出 Excel ================= */
 function monthAOA(m){
