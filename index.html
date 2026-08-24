@@ -118,6 +118,9 @@ html[data-theme="dark"] .c-half{color:#2dd4bf;}
 .c-職災{background:#fecaca!important; color:#991b1b; font-size:11px!important;}
 .c-留停{background:#ede9fe!important; color:#6d28d9; font-size:11px!important;}
 .c-X{color:#94a3b8; text-decoration:line-through;}
+/* 理貨員：姓名淺藍底 */
+td.sticky2.picker{background:#dbeafe!important; color:#1e40af;}
+html[data-theme="dark"] td.sticky2.picker{background:#1e3a5f!important; color:#93c5fd;}
 /* 遞交後修改：紅底(壓過假別色) */
 td.day.late{background:#f87171!important; color:#7f1d1d!important; font-weight:bold;}
 html[data-theme="dark"] td.day.late{background:#7f1d1d!important; color:#fecaca!important;}
@@ -385,7 +388,7 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
   <div class="panel">
     <h2>👥 員工名冊 <button class="mini" style="float:right" onclick="document.getElementById('roster').style.display='none'">✕ 關閉</button></h2>
     <table>
-      <thead><tr><th>序</th><th>姓名</th><th>工號</th><th>單位</th><th>到職日</th><th>狀態</th><th class="adminOnly"></th></tr></thead>
+      <thead><tr><th>序</th><th>姓名</th><th>工號</th><th>單位</th><th>理貨員</th><th>到職日</th><th>狀態</th><th class="adminOnly"></th></tr></thead>
       <tbody id="rosterBody"></tbody>
       <tbody class="adminOnly">
         <tr class="addrow">
@@ -393,6 +396,7 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
           <td><input id="nName" placeholder="姓名"></td>
           <td><input id="nNo" placeholder="工號"></td>
           <td><select id="nUnit"><option value="">未分類</option><option>發送</option><option>到著</option><option>冷鏈</option><option>籠車</option></select></td>
+          <td style="text-align:center"><input type="checkbox" id="nPicker" style="width:auto"></td>
           <td><input id="nHire" placeholder="115/8/1"></td>
           <td colspan="2"><button class="mini primary" id="addEmp">＋新增</button></td>
         </tr>
@@ -634,7 +638,7 @@ function renderGrid(){
       const rec = getRec(e.emp_no, mm);
       const st = calcStats(rec, dim);
       body += `<tr><td class="sticky1" style="color:var(--sub)">${e.seq===999?"":e.seq}</td>
-        <td class="sticky2" title="到職 ${e.hire_date}｜${UNIT_LABEL[e.unit||""]}">${e.name}</td>
+        <td class="sticky2${e.is_picker?" picker":""}" title="到職 ${e.hire_date}｜${UNIT_LABEL[e.unit||""]}${e.is_picker?"｜理貨員(無餐費)":""}">${e.name}</td>
         <td class="sticky3" style="color:var(--sub);font-size:12px">${e.emp_no}</td>`;
       for(let d=1;d<=dim;d++){
         const v = rec.days[d-1];
@@ -902,7 +906,7 @@ function renderStats(){
         ? `<td class="quota"><input type="number" min="0" step="0.5" value="${q||""}" placeholder="0" onchange="setQuota(${e.id},this.value)"></td>`
         : `<td>${q||""}</td>`;
       body += `<tr><td class="sticky1" style="color:var(--sub)">${e.seq===999?"":e.seq}</td>
-        <td class="sticky2">${e.name}</td>
+        <td class="sticky2${e.is_picker?" picker":""}" ${e.is_picker?'title="理貨員(無餐費)"':""}>${e.name}</td>
         <td class="sticky3" style="color:var(--sub);font-size:12px">${e.emp_no}</td>
         ${qCell}<td>${used||""}</td><td class="${left<0?"neg":""}">${q?left:""}</td>`;
       for(const c of cols) if(c!=="特") body += `<td>${t[c]||""}</td>`;
@@ -987,6 +991,7 @@ function monthAOA(m){
   const dim = daysInMonth(yy,m);
   const rows = [];
   const lateSet = new Set();   // "R:C" 遞交後修改的格子
+  const pickerRows = new Set(); // 理貨員所在列(姓名淺藍底)
   rows.push([`新竹物流彰化轉運中心${yy}.${String(m).padStart(2,"0")}勤怠表`]);
   const hd = ["序","姓名","工號","到職日"];
   const wd2 = ["","","",""];
@@ -1001,6 +1006,7 @@ function monthAOA(m){
       const st = calcStats(rec, dim);
       const row = [e.seq===999?"":e.seq, e.name, e.emp_no, e.hire_date];
       const R = rows.length;
+      if(e.is_picker) pickerRows.add(R);
       for(let d=1;d<=dim;d++){
         const v = rec.days[d-1];
         const f = parseFloat(v);
@@ -1017,10 +1023,10 @@ function monthAOA(m){
     rows.push([]);
     for(const n of notes){ noteRows.set(rows.length, n.color); rows.push([n.text]); }
   }
-  return {rows, lateSet, noteRows};
+  return {rows, lateSet, noteRows, pickerRows};
 }
 const NOTE_XLSX = {plain:[null,"64748B"], yellow:["FEF9C3","A16207"], red:["FCA5A5","7F1D1D"], blue:["DBEAFE","1D4ED8"], green:["DCFCE7","15803D"], gray:["E2E8F0","475569"]};
-function styleSheet(ws, m, lateSet, noteRows){
+function styleSheet(ws, m, lateSet, noteRows, pickerRows){
   const dim = daysInMonth(yy,m);
   const lastCol = 4+dim+3;
   ws["!cols"] = [{wch:4},{wch:9},{wch:7},{wch:9}, ...Array(dim).fill({wch:3.5}), {wch:9},{wch:9},{wch:9},{wch:9}];
@@ -1059,6 +1065,11 @@ function styleSheet(ws, m, lateSet, noteRows){
       }else{
         const isDayCol = C>=4 && C<4+dim;
         const s = {alignment:center, font:{name:F, sz:10}, border};
+        if(C===1 && pickerRows && pickerRows.has(R)){
+          // 理貨員姓名淺藍底
+          s.fill = {patternType:"solid", fgColor:{rgb:"DBEAFE"}};
+          s.font = {name:F, sz:10, bold:true, color:{rgb:"1E40AF"}};
+        }
         if(isDayCol){
           const v = String(cell.v);
           if(lateSet && lateSet.has(`${R}:${C}`)){
@@ -1103,9 +1114,9 @@ function diffSheet(m){
 }
 $("expMonth").onclick = ()=>{
   const wb = XLSX.utils.book_new();
-  const {rows, lateSet, noteRows} = monthAOA(mm);
+  const {rows, lateSet, noteRows, pickerRows} = monthAOA(mm);
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  styleSheet(ws, mm, lateSet, noteRows);
+  styleSheet(ws, mm, lateSet, noteRows, pickerRows);
   XLSX.utils.book_append_sheet(wb, ws, `${yy}.${String(mm).padStart(2,"0")}`);
   const dws = diffSheet(mm);
   if(dws) XLSX.utils.book_append_sheet(wb, dws, "遞交後異動");
@@ -1114,9 +1125,9 @@ $("expMonth").onclick = ()=>{
 $("expYear").onclick = ()=>{
   const wb = XLSX.utils.book_new();
   for(let m=1;m<=12;m++){
-    const {rows, lateSet, noteRows} = monthAOA(m);
+    const {rows, lateSet, noteRows, pickerRows} = monthAOA(m);
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    styleSheet(ws, m, lateSet, noteRows);
+    styleSheet(ws, m, lateSet, noteRows, pickerRows);
     XLSX.utils.book_append_sheet(wb, ws, `${yy}.${String(m).padStart(2,"0")}`);
   }
   XLSX.writeFile(wb, `彰化轉運中心${yy}年出勤表(全年).xlsx`);
@@ -1128,14 +1139,24 @@ function renderRoster(){
   const unitCell = e => isAdmin
     ? `<select onchange="setUnit(${e.id},this.value)">${["","發送","到著","冷鏈","籠車"].map(u=>`<option value="${u}" ${((e.unit||"")===u)?"selected":""}>${u===""?"未分類":u}</option>`).join("")}</select>`
     : (e.unit||"未分類");
+  const pickerCell = e => isAdmin
+    ? `<td style="text-align:center"><input type="checkbox" style="width:auto" ${e.is_picker?"checked":""} onchange="setPicker(${e.id},this.checked)"></td>`
+    : `<td style="text-align:center">${e.is_picker?"✓":""}</td>`;
   $("rosterBody").innerHTML = employees.map(e=>`
     <tr class="${e.active?"":"inactive"}">
-      <td>${e.seq===999?"":e.seq}</td><td>${e.name}${e.note?` <span class="unitTag" title="${e.note}">備註</span>`:""}</td><td>${e.emp_no}</td>
-      <td>${unitCell(e)}</td><td>${e.hire_date}</td>
+      <td>${e.seq===999?"":e.seq}</td><td ${e.is_picker?'style="background:#dbeafe;border-radius:6px"':""}>${e.name}${e.note?` <span class="unitTag" title="${e.note}">備註</span>`:""}</td><td>${e.emp_no}</td>
+      <td>${unitCell(e)}</td>${pickerCell(e)}<td>${e.hire_date}</td>
       <td>${e.active?"在職":"停用"}</td>
       <td class="adminOnly"><button class="mini" onclick="toggleEmp(${e.id},${!e.active})">${e.active?"停用":"復職"}</button></td>
     </tr>`).join("");
 }
+window.setPicker = async (id, on)=>{
+  if(!isAdmin) return;
+  const j = await fnCall({action:"patch_employee", id, fields:{is_picker:on}});
+  if(!j.ok){ alert("更新失敗："+(j.error||"")); return; }
+  const e = employees.find(x=>x.id===id); if(e) e.is_picker=on;
+  renderRoster(); render();
+};
 window.setUnit = async (id, u)=>{
   if(!isAdmin) return;
   const j = await fnCall({action:"patch_employee", id, fields:{unit:u}});
@@ -1157,11 +1178,11 @@ window.toggleEmp = async (id, act)=>{
 $("addEmp").onclick = async ()=>{
   const name=$("nName").value.trim(), no=$("nNo").value.trim();
   if(!name||!no){ alert("姓名、工號必填"); return; }
-  const j = await fnCall({action:"add_employee", seq:+($("nSeq").value)||999, name, emp_no:no, hire_date:$("nHire").value.trim(), unit:$("nUnit").value});
+  const j = await fnCall({action:"add_employee", seq:+($("nSeq").value)||999, name, emp_no:no, hire_date:$("nHire").value.trim(), unit:$("nUnit").value, is_picker:$("nPicker").checked});
   if(!j.ok){ alert("新增失敗："+(j.error||"工號可能重複")); return; }
   employees.push(j.employee);
   employees.sort((a,b)=>(a.seq-b.seq)||a.emp_no.localeCompare(b.emp_no));
-  $("nSeq").value=$("nName").value=$("nNo").value=$("nHire").value=""; $("nUnit").value="";
+  $("nSeq").value=$("nName").value=$("nNo").value=$("nHire").value=""; $("nUnit").value=""; $("nPicker").checked=false;
   renderRoster(); render();
 };
 
