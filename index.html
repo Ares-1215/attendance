@@ -118,6 +118,21 @@ html[data-theme="dark"] .c-half{color:#2dd4bf;}
 .c-職災{background:#fecaca!important; color:#991b1b; font-size:11px!important;}
 .c-留停{background:#ede9fe!important; color:#6d28d9; font-size:11px!important;}
 .c-X{color:#94a3b8; text-decoration:line-through;}
+/* 遞交後修改：紅底(壓過假別色) */
+td.day.late{background:#f87171!important; color:#7f1d1d!important; font-weight:bold;}
+html[data-theme="dark"] td.day.late{background:#7f1d1d!important; color:#fecaca!important;}
+#subInfo{font-size:12px; color:#16a34a; font-weight:bold;}
+#diffBtn{background:#fee2e2; color:#b91c1c; border-color:#fca5a5; font-weight:bold;}
+html[data-theme="dark"] #diffBtn{background:#450a0a; color:#fca5a5; border-color:#7f1d1d;}
+/* 異動清單 modal */
+#diffModal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:flex-start; justify-content:center; z-index:60; padding:5vh 12px;}
+#diffModal .panel{background:var(--card); border-radius:14px; width:min(96vw,560px); max-height:88vh; overflow:auto; padding:20px;}
+#diffModal h2{font-size:17px; margin-bottom:4px;}
+#diffModal .when{font-size:12px; color:var(--sub); margin-bottom:12px;}
+#diffModal table{width:100%; border-collapse:collapse;}
+#diffModal th,#diffModal td{padding:6px 8px; font-size:13px; border-bottom:1px solid var(--line); text-align:center;}
+#diffModal .to{color:#dc2626; font-weight:bold;}
+html[data-theme="dark"] #diffModal .to{color:#f87171;}
 /* ===== 選碼面板 ===== */
 #palette{position:absolute; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.3); padding:10px; display:none; z-index:50; width:230px;}
 #palette .grid{display:grid; grid-template-columns:repeat(4,1fr); gap:5px;}
@@ -211,7 +226,8 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
   #legend::-webkit-scrollbar{display:none;}
   #legend .hint{display:none;}
   .chip{flex:0 0 auto; font-size:12px; padding:5px 10px;}
-  #fillBtn{flex:0 0 auto; font-size:12px;}
+  #fillBtn,#submitBtn,#diffBtn{flex:0 0 auto; font-size:12px;}
+  #subInfo{flex:0 0 auto; white-space:nowrap;}
   #wrap{margin:0 8px 16px; max-height:calc(100vh - 176px); border-radius:8px;}
   th.sticky1,td.sticky1,th.sticky3,td.sticky3{display:none;}
   th.sticky2,td.sticky2{left:0; min-width:66px; font-size:12.5px; padding:0 4px; box-shadow:2px 0 4px rgba(0,0,0,.06);}
@@ -283,6 +299,20 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
 <div id="legend">
   <span class="hint" id="legendHint">點格子選代碼；或先點下方「印章」再連續點格子快速填：</span>
   <button id="fillBtn" class="adminOnly mini" title="把本月所有空格填入1(上班)">⚡ 空格填1</button>
+  <button id="submitBtn" class="adminOnly mini" title="把本月現況存檔為遞交版本，之後的修改會以紅底標示">📤 遞交存檔</button>
+  <span id="subInfo"></span>
+  <button id="diffBtn" class="mini" style="display:none">🔴 異動清單</button>
+</div>
+
+<div id="diffModal">
+  <div class="panel">
+    <h2>🔴 遞交後異動清單 <button class="mini" style="float:right" onclick="document.getElementById('diffModal').style.display='none'">✕ 關閉</button></h2>
+    <div class="when" id="diffWhen"></div>
+    <table>
+      <thead><tr><th>姓名</th><th>工號</th><th>日期</th><th>遞交時</th><th>改為</th></tr></thead>
+      <tbody id="diffBody"></tbody>
+    </table>
+  </div>
 </div>
 
 <div id="wrap"><table id="grid"></table></div>
@@ -427,14 +457,19 @@ async function loadAll(){
   setSave("載入中…","saving");
   const [eRes, rRes] = await Promise.all([
     fetch(`${SB_URL}/att_employees?select=*&order=seq,emp_no`, {headers:H}),
-    fetch(`${SB_URL}/att_records?select=emp_no,yy,mm,days,overtime&yy=eq.${yy}`, {headers:H})
+    fetch(`${SB_URL}/att_records?select=emp_no,yy,mm,days,overtime,submitted_days,submitted_at&yy=eq.${yy}`, {headers:H})
   ]);
   employees = await eRes.json();
   records = {};
   (await rRes.json()).forEach(r=>{
     const days = Array.isArray(r.days)? r.days.slice(0,31) : [];
     while(days.length<31) days.push("");
-    records[`${r.emp_no}_${r.yy}_${r.mm}`] = {days, overtime:+r.overtime||0};
+    let sub = null;
+    if(Array.isArray(r.submitted_days)){
+      sub = r.submitted_days.slice(0,31);
+      while(sub.length<31) sub.push("");
+    }
+    records[`${r.emp_no}_${r.yy}_${r.mm}`] = {days, overtime:+r.overtime||0, submitted_days:sub, submitted_at:r.submitted_at||null};
   });
   setSave("✓ 已載入","saved");
   render();
@@ -561,8 +596,9 @@ function renderGrid(){
       for(let d=1;d<=dim;d++){
         const v = rec.days[d-1];
         const w = wday(yy,mm,d);
-        const cls = ["day", v?("c-"+cssCode(v)):"", d===td?"today":(w===0||w===6)?"wknd":""].join(" ");
-        body += `<td class="${cls}" data-e="${e.emp_no}" data-d="${d}">${v}</td>`;
+        const late = rec.submitted_days && v!==rec.submitted_days[d-1];
+        const cls = ["day", v?("c-"+cssCode(v)):"", d===td?"today":(w===0||w===6)?"wknd":"", late?"late":""].join(" ");
+        body += `<td class="${cls}" data-e="${e.emp_no}" data-d="${d}" ${late?`title="遞交時：${rec.submitted_days[d-1]||"空"}"`:""}>${v}</td>`;
       }
       body += `<td class="stat work">${st.work||""}</td><td class="stat leave">${st.leave||""}</td>
                <td class="stat off">${st.off||""}</td><td class="stat ot">${st.ot||""}</td></tr>`;
@@ -583,7 +619,65 @@ function renderGrid(){
       cell.oncontextmenu = ev => { ev.preventDefault(); setCell(cell.dataset.e, +cell.dataset.d, ""); };
     });
   }
+  updateSubmitUI();
 }
+
+/* ================= 遞交存檔 / 異動 ================= */
+function monthSubmittedAt(m){
+  for(const e of employees.filter(x=>x.active)){
+    const rec = records[`${e.emp_no}_${yy}_${m}`];
+    if(rec && rec.submitted_at) return rec.submitted_at;
+  }
+  return null;
+}
+function monthDiffs(m){
+  const out = [];
+  for(const e of employees.filter(x=>x.active)){
+    const rec = records[`${e.emp_no}_${yy}_${m}`];
+    if(!rec || !rec.submitted_days) continue;
+    const dim = daysInMonth(yy,m);
+    for(let d=1;d<=dim;d++){
+      const a = rec.submitted_days[d-1]||"", b = rec.days[d-1]||"";
+      if(a!==b) out.push({name:e.name, emp_no:e.emp_no, day:d, from:a, to:b});
+    }
+  }
+  return out;
+}
+function fmtSubDate(iso){
+  const t = new Date(iso);
+  return `${t.getFullYear()-1911}/${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}`;
+}
+function updateSubmitUI(){
+  const at = monthSubmittedAt(mm);
+  $("subInfo").textContent = at ? `✓ 本月已於 ${fmtSubDate(at)} 遞交` : "";
+  const diffs = at ? monthDiffs(mm) : [];
+  $("diffBtn").style.display = diffs.length ? "inline-block" : "none";
+  $("diffBtn").textContent = `🔴 異動清單(${diffs.length})`;
+}
+$("submitBtn").onclick = async ()=>{
+  if(!isAdmin) return;
+  const at = monthSubmittedAt(mm);
+  const msg = at
+    ? `${yy}年${mm}月已於 ${fmtSubDate(at)} 遞交過。\n要以「現在的內容」重新存檔嗎？（紅底標示會歸零重算）`
+    : `將 ${yy}年${mm}月 現況存檔為遞交版本？\n之後的修改會以紅底標示。`;
+  if(!confirm(msg)) return;
+  if(dirty.size) await flush();
+  const j = await fnCall({action:"snapshot_month", yy, mm});
+  if(!j.ok){ alert("遞交存檔失敗："+(j.error||"")); return; }
+  for(const k of Object.keys(records)){
+    const [,ky,km] = k.match(/^(?:.*)_(\d+)_(\d+)$/)||[];
+    if(+ky===yy && +km===mm){ records[k].submitted_days = records[k].days.slice(); records[k].submitted_at = j.submitted_at; }
+  }
+  renderGrid();
+  alert(`已遞交存檔（${j.count} 筆）。`);
+};
+$("diffBtn").onclick = ()=>{
+  const at = monthSubmittedAt(mm);
+  $("diffWhen").textContent = `${yy}年${mm}月，遞交時間：${at?fmtSubDate(at):"—"}`;
+  $("diffBody").innerHTML = monthDiffs(mm).map(d=>
+    `<tr><td>${d.name}</td><td>${d.emp_no}</td><td>${mm}/${d.day}</td><td>${d.from||"空"}</td><td class="to">${d.to||"空"}</td></tr>`).join("");
+  $("diffModal").style.display = "flex";
+};
 
 function onCell(cell, ev){
   const e = cell.dataset.e, d = +cell.dataset.d;
@@ -807,9 +901,17 @@ $("expStats").onclick = ()=>{
 };
 
 /* ================= 匯出 Excel ================= */
+// 各代碼在 Excel 的配色（同網頁 c-* 色系）：[底色, 字色]
+const CODE_XLSX = {
+  "休":["E2E8F0","475569"],"特":["DBEAFE","1D4ED8"],"病":["FFEDD5","C2410C"],"事":["FEF9C3","A16207"],
+  "婚":["FCE7F3","BE185D"],"喪":["E5E5E5","404040"],"公":["CCFBF1","0F766E"],"家":["FEF3C7","B45309"],
+  "生理":["FAE8FF","A21CAF"],"教育":["E0F2FE","0369A1"],"產":["FBCFE8","9D174D"],"陪產":["FBCFE8","9D174D"],
+  "產檢":["FBCFE8","9D174D"],"職傷":["FEE2E2","B91C1C"],"職災":["FECACA","991B1B"],"留停":["EDE9FE","6D28D9"]
+};
 function monthAOA(m){
   const dim = daysInMonth(yy,m);
   const rows = [];
+  const lateSet = new Set();   // "R:C" 遞交後修改的格子
   rows.push([`新竹物流彰化轉運中心${yy}.${String(m).padStart(2,"0")}勤怠表`]);
   const hd = ["序","姓名","工號","到職日"];
   const wd2 = ["","","",""];
@@ -823,24 +925,27 @@ function monthAOA(m){
       const rec = records[key(e.emp_no,m)] || {days:Array(31).fill(""),overtime:0};
       const st = calcStats(rec, dim);
       const row = [e.seq===999?"":e.seq, e.name, e.emp_no, e.hire_date];
+      const R = rows.length;
       for(let d=1;d<=dim;d++){
         const v = rec.days[d-1];
         const f = parseFloat(v);
         row.push(v===""? "" : (!isNaN(f)? f : v));
+        if(rec.submitted_days && v!==rec.submitted_days[d-1]) lateSet.add(`${R}:${3+d}`);
       }
       row.push(st.work, st.leave, st.off, st.ot);
       rows.push(row);
     }
   }
-  return rows;
+  return {rows, lateSet};
 }
-function styleSheet(ws, m){
+function styleSheet(ws, m, lateSet){
   const dim = daysInMonth(yy,m);
   const lastCol = 4+dim+3;
   ws["!cols"] = [{wch:4},{wch:9},{wch:7},{wch:9}, ...Array(dim).fill({wch:3.5}), {wch:9},{wch:9},{wch:9},{wch:9}];
   ws["!merges"] = [{s:{r:0,c:0}, e:{r:0,c:lastCol}}];
   const range = XLSX.utils.decode_range(ws["!ref"]);
   const center = {horizontal:"center", vertical:"center"};
+  const F = "微軟正黑體";
   const border = {top:{style:"thin",color:{rgb:"CBD5E1"}},bottom:{style:"thin",color:{rgb:"CBD5E1"}},left:{style:"thin",color:{rgb:"CBD5E1"}},right:{style:"thin",color:{rgb:"CBD5E1"}}};
   for(let R=range.s.r; R<=range.e.r; R++){
     const aCell = ws[XLSX.utils.encode_cell({r:R,c:0})];
@@ -849,30 +954,77 @@ function styleSheet(ws, m){
     for(let C=range.s.c; C<=range.e.c; C++){
       const cell = ws[XLSX.utils.encode_cell({r:R,c:C})];
       if(!cell) continue;
-      if(R===0){          // 標題列
-        cell.s = {alignment:center, font:{name:"微軟正黑體", sz:14, bold:true}};
-      }else if(isUnitRow){ // 單位分組列：藍底白字
-        cell.s = {alignment:{horizontal:"left", vertical:"center"}, font:{name:"微軟正黑體", sz:11, bold:true, color:{rgb:"FFFFFF"}}, fill:{patternType:"solid", fgColor:{rgb:"1D4ED8"}}, border};
-      }else if(R===1 || R===2){ // 表頭兩列：灰底粗體
-        cell.s = {alignment:center, font:{name:"微軟正黑體", sz:10, bold:true}, fill:{patternType:"solid", fgColor:{rgb:"F1F5F9"}}, border};
-      }else{               // 資料列：全部置中
-        cell.s = {alignment:center, font:{name:"微軟正黑體", sz:10}, border};
+      if(R===0){
+        cell.s = {alignment:center, font:{name:F, sz:14, bold:true}};
+      }else if(isUnitRow){
+        cell.s = {alignment:{horizontal:"left", vertical:"center"}, font:{name:F, sz:11, bold:true, color:{rgb:"FFFFFF"}}, fill:{patternType:"solid", fgColor:{rgb:"1D4ED8"}}, border};
+      }else if(R===1){
+        cell.s = {alignment:center, font:{name:F, sz:10, bold:true}, fill:{patternType:"solid", fgColor:{rgb:"F1F5F9"}}, border};
+      }else if(R===2){
+        // 星期列：六日上色
+        const isWknd = (cell.v==="六" || cell.v==="日");
+        cell.s = {alignment:center, font:{name:F, sz:10, bold:true, color:isWknd?{rgb:"C2410C"}:undefined}, fill:{patternType:"solid", fgColor:{rgb:isWknd?"FFEDD5":"F1F5F9"}}, border};
+      }else{
+        const isDayCol = C>=4 && C<4+dim;
+        const s = {alignment:center, font:{name:F, sz:10}, border};
+        if(isDayCol){
+          const v = String(cell.v);
+          if(lateSet && lateSet.has(`${R}:${C}`)){
+            s.fill = {patternType:"solid", fgColor:{rgb:"F87171"}};
+            s.font = {name:F, sz:10, bold:true, color:{rgb:"7F1D1D"}};
+          }else if(CODE_XLSX[v]){
+            s.fill = {patternType:"solid", fgColor:{rgb:CODE_XLSX[v][0]}};
+            s.font = {name:F, sz:10, bold:true, color:{rgb:CODE_XLSX[v][1]}};
+          }else if(v==="1" || v==="0.5"){
+            s.font = {name:F, sz:10, color:{rgb:v==="1"?"16A34A":"0D9488"}};
+          }else if(v==="X"){
+            s.font = {name:F, sz:10, strike:true, color:{rgb:"94A3B8"}};
+          }
+        }
+        cell.s = s;
       }
     }
   }
 }
+function diffSheet(m){
+  const diffs = monthDiffs(m);
+  if(!diffs.length) return null;
+  const at = monthSubmittedAt(m);
+  const rows = [[`${yy}年${m}月 遞交後異動清單（遞交時間：${at?fmtSubDate(at):"—"}）`],
+                ["姓名","工號","日期","遞交時","改為"]];
+  for(const d of diffs) rows.push([d.name, d.emp_no, `${m}/${d.day}`, d.from||"空", d.to||"空"]);
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"] = [{wch:10},{wch:8},{wch:8},{wch:8},{wch:8}];
+  ws["!merges"] = [{s:{r:0,c:0}, e:{r:0,c:4}}];
+  const center = {horizontal:"center", vertical:"center"};
+  const F = "微軟正黑體";
+  const border = {top:{style:"thin",color:{rgb:"CBD5E1"}},bottom:{style:"thin",color:{rgb:"CBD5E1"}},left:{style:"thin",color:{rgb:"CBD5E1"}},right:{style:"thin",color:{rgb:"CBD5E1"}}};
+  const range = XLSX.utils.decode_range(ws["!ref"]);
+  for(let R=range.s.r; R<=range.e.r; R++) for(let C=range.s.c; C<=range.e.c; C++){
+    const cell = ws[XLSX.utils.encode_cell({r:R,c:C})];
+    if(!cell) continue;
+    if(R===0) cell.s = {alignment:center, font:{name:F, sz:12, bold:true}};
+    else if(R===1) cell.s = {alignment:center, font:{name:F, sz:10, bold:true}, fill:{patternType:"solid", fgColor:{rgb:"F1F5F9"}}, border};
+    else cell.s = {alignment:center, font:{name:F, sz:10, bold:C===4, color:C===4?{rgb:"DC2626"}:undefined}, fill:C===4?{patternType:"solid", fgColor:{rgb:"FEE2E2"}}:undefined, border};
+  }
+  return ws;
+}
 $("expMonth").onclick = ()=>{
   const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(monthAOA(mm));
-  styleSheet(ws, mm);
+  const {rows, lateSet} = monthAOA(mm);
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  styleSheet(ws, mm, lateSet);
   XLSX.utils.book_append_sheet(wb, ws, `${yy}.${String(mm).padStart(2,"0")}`);
+  const dws = diffSheet(mm);
+  if(dws) XLSX.utils.book_append_sheet(wb, dws, "遞交後異動");
   XLSX.writeFile(wb, `彰化轉運中心${yy}年${mm}月出勤表.xlsx`);
 };
 $("expYear").onclick = ()=>{
   const wb = XLSX.utils.book_new();
   for(let m=1;m<=12;m++){
-    const ws = XLSX.utils.aoa_to_sheet(monthAOA(m));
-    styleSheet(ws, m);
+    const {rows, lateSet} = monthAOA(m);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    styleSheet(ws, m, lateSet);
     XLSX.utils.book_append_sheet(wb, ws, `${yy}.${String(m).padStart(2,"0")}`);
   }
   XLSX.writeFile(wb, `彰化轉運中心${yy}年出勤表(全年).xlsx`);
