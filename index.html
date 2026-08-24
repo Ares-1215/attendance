@@ -121,6 +121,8 @@ html[data-theme="dark"] .c-half{color:#2dd4bf;}
 /* 理貨員：姓名淺藍底 */
 td.sticky2.picker{background:#dbeafe!important; color:#1e40af;}
 html[data-theme="dark"] td.sticky2.picker{background:#1e3a5f!important; color:#93c5fd;}
+#roster td.pickerName{background:#dbeafe; color:#1e40af; border-radius:6px; font-weight:bold;}
+html[data-theme="dark"] #roster td.pickerName{background:#1e3a5f; color:#93c5fd;}
 /* 遞交後修改：紅底(壓過假別色) */
 td.day.late{background:#f87171!important; color:#7f1d1d!important; font-weight:bold;}
 html[data-theme="dark"] td.day.late{background:#7f1d1d!important; color:#fecaca!important;}
@@ -1064,7 +1066,8 @@ function styleSheet(ws, m, lateSet, noteRows, pickerRows){
         cell.s = {alignment:center, font:{name:F, sz:10, bold:true, color:isWknd?{rgb:"C2410C"}:undefined}, fill:{patternType:"solid", fgColor:{rgb:isWknd?"FFEDD5":"F1F5F9"}}, border};
       }else{
         const isDayCol = C>=4 && C<4+dim;
-        const s = {alignment:center, font:{name:F, sz:10}, border};
+        // 姓名/工號/到職日 粗體
+        const s = {alignment:center, font:{name:F, sz:10, bold:(C>=1 && C<=3)}, border};
         if(C===1 && pickerRows && pickerRows.has(R)){
           // 理貨員姓名淺藍底
           s.fill = {patternType:"solid", fgColor:{rgb:"DBEAFE"}};
@@ -1144,7 +1147,7 @@ function renderRoster(){
     : `<td style="text-align:center">${e.is_picker?"✓":""}</td>`;
   $("rosterBody").innerHTML = employees.map(e=>`
     <tr class="${e.active?"":"inactive"}">
-      <td>${e.seq===999?"":e.seq}</td><td ${e.is_picker?'style="background:#dbeafe;border-radius:6px"':""}>${e.name}${e.note?` <span class="unitTag" title="${e.note}">備註</span>`:""}</td><td>${e.emp_no}</td>
+      <td>${e.seq===999?"":e.seq}</td><td ${e.is_picker?'class="pickerName"':""}>${e.name}${e.note?` <span class="unitTag" title="${e.note}">備註</span>`:""}</td><td>${e.emp_no}</td>
       <td>${unitCell(e)}</td>${pickerCell(e)}<td>${e.hire_date}</td>
       <td>${e.active?"在職":"停用"}</td>
       <td class="adminOnly"><button class="mini" onclick="toggleEmp(${e.id},${!e.active})">${e.active?"停用":"復職"}</button></td>
