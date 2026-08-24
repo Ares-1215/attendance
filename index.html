@@ -124,6 +124,22 @@ html[data-theme="dark"] td.day.late{background:#7f1d1d!important; color:#fecaca!
 #subInfo{font-size:12px; color:#16a34a; font-weight:bold;}
 #diffBtn{background:#fee2e2; color:#b91c1c; border-color:#fca5a5; font-weight:bold;}
 html[data-theme="dark"] #diffBtn{background:#450a0a; color:#fca5a5; border-color:#7f1d1d;}
+/* ===== 底部提醒列 ===== */
+#notesBar{margin:-12px 16px 24px; padding:8px 12px; background:var(--card); border:1px solid var(--line); border-radius:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:13px;}
+#notesBar .nlabel{color:var(--sub); font-size:12px; font-weight:bold;}
+.note{padding:3px 12px; border-radius:8px; font-weight:bold; font-size:12.5px;}
+.note-plain{background:transparent; color:var(--sub); border:1px dashed var(--line);}
+.note-yellow{background:#fef9c3; color:#a16207;}
+.note-red{background:#fca5a5; color:#7f1d1d;}
+.note-blue{background:#dbeafe; color:#1d4ed8;}
+.note-green{background:#dcfce7; color:#15803d;}
+.note-gray{background:#e2e8f0; color:#475569;}
+#notesModal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:flex-start; justify-content:center; z-index:60; padding:5vh 12px;}
+#notesModal .panel{background:var(--card); border-radius:14px; width:min(96vw,520px); max-height:88vh; overflow:auto; padding:20px;}
+#notesModal h2{font-size:17px; margin-bottom:12px;}
+#notesRows .nrow{display:flex; gap:6px; margin-bottom:8px; align-items:center;}
+#notesRows input{flex:1; font-family:inherit; font-size:13px; border:1px solid var(--line); border-radius:6px; padding:6px 8px; background:var(--card); color:var(--txt);}
+#notesRows select{font-size:13px; padding:5px 6px;}
 /* 異動清單 modal */
 #diffModal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:flex-start; justify-content:center; z-index:60; padding:5vh 12px;}
 #diffModal .panel{background:var(--card); border-radius:14px; width:min(96vw,560px); max-height:88vh; overflow:auto; padding:20px;}
@@ -181,7 +197,10 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
 #printTitle{display:none;}
 /* ===== 列印版面 ===== */
 @media print{
-  header,#monthTabs,#legend,#gate,#palette,#roster,#printMenu,#summary .opts label,#stats .opts label,#stats .opts button{display:none!important;}
+  header,#monthTabs,#legend,#gate,#palette,#roster,#printMenu,#notesModal,#diffModal,#notesEditBtn,#summary .opts label,#stats .opts label,#stats .opts button{display:none!important;}
+  #notesBar{border:none!important; margin:2mm 0 0!important; padding:0!important; page-break-inside:avoid;}
+  .note{font-size:9px!important; padding:2px 8px!important;}
+  #notesBar .nlabel{font-size:9px!important;}
   /* 深色主題列印時強制轉白底 */
   :root,html[data-theme="dark"]{
     --bg:#fff; --card:#fff; --line:#cbd5e1; --txt:#000; --sub:#475569;
@@ -240,6 +259,7 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
   #palette .who{font-size:14px; font-weight:bold; color:var(--txt); margin-bottom:10px;}
   #summary{margin:0 8px 16px;}
   .sumcard{padding:10px 12px;}
+  #notesBar{margin:-8px 8px 16px; font-size:12px;}
   #stats{margin:0 8px 16px;}
   #statsWrap{max-height:calc(100vh - 210px);}
   #statsGrid td,#statsGrid th{padding:4px 5px; min-width:38px; font-size:12px;}
@@ -317,6 +337,25 @@ html[data-theme="dark"] tr.unitRow td{background:#1c2a45;}
 
 <div id="wrap"><table id="grid"></table></div>
 
+<div id="notesBar">
+  <span class="nlabel">📌 備註</span>
+  <span id="notesList"></span>
+  <button id="notesEditBtn" class="adminOnly mini">✏️ 編輯</button>
+</div>
+
+<div id="notesModal">
+  <div class="panel">
+    <h2>📌 編輯底部提醒 <button class="mini" style="float:right" onclick="document.getElementById('notesModal').style.display='none'">✕ 關閉</button></h2>
+    <div id="notesRows"></div>
+    <div style="display:flex; gap:8px; margin-top:12px;">
+      <button class="mini" id="noteAdd">＋ 加一行</button>
+      <span style="flex:1"></span>
+      <button class="mini primary" id="noteSave">💾 儲存</button>
+    </div>
+    <p style="font-size:12px;color:var(--sub);margin-top:10px">提醒列會顯示在網頁表格下方、列印版底部、匯出 Excel 最下面。</p>
+  </div>
+</div>
+
 <div id="summary">
   <div class="opts">
     <b style="color:var(--txt)">本月勤缺彙總</b>（對照另一系統輸入用）
@@ -382,6 +421,7 @@ let employees = [];
 let records = {};
 let yy = 115, mm = (new Date().getMonth()+1);
 let unitFilter = "all";
+let notes = [];
 let stamp = null, palTarget = null;
 const dirty = new Set(); let saveTimer = null;
 let isAdmin = false, adminToken = "";
@@ -455,11 +495,13 @@ $("logoutBtn").onclick = ()=>{
 /* ================= 資料載入 ================= */
 async function loadAll(){
   setSave("載入中…","saving");
-  const [eRes, rRes] = await Promise.all([
+  const [eRes, rRes, nRes] = await Promise.all([
     fetch(`${SB_URL}/att_employees?select=*&order=seq,emp_no`, {headers:H}),
-    fetch(`${SB_URL}/att_records?select=emp_no,yy,mm,days,overtime,submitted_days,submitted_at&yy=eq.${yy}`, {headers:H})
+    fetch(`${SB_URL}/att_records?select=emp_no,yy,mm,days,overtime,submitted_days,submitted_at&yy=eq.${yy}`, {headers:H}),
+    fetch(`${SB_URL}/att_settings?key=eq.footer_notes&select=value`, {headers:H})
   ]);
   employees = await eRes.json();
+  try{ const nRows = await nRes.json(); notes = Array.isArray(nRows[0]?.value) ? nRows[0].value : []; }catch{ notes = []; }
   records = {};
   (await rRes.json()).forEach(r=>{
     const days = Array.isArray(r.days)? r.days.slice(0,31) : [];
@@ -524,6 +566,7 @@ let view = "grid";
 function setView(v){
   view = v;
   $("wrap").style.display    = v==="grid" ? "block" : "none";
+  $("notesBar").style.display = v==="grid" ? "flex" : "none";
   $("summary").style.display = v==="sum"  ? "block" : "none";
   $("stats").style.display   = v==="stats"? "block" : "none";
   $("monthTabs").style.display = v==="stats" ? "none" : "flex";
@@ -620,7 +663,39 @@ function renderGrid(){
     });
   }
   updateSubmitUI();
+  renderNotes();
 }
+
+/* ================= 底部提醒列 ================= */
+function renderNotes(){
+  $("notesList").innerHTML = notes.map(n=>`<span class="note note-${n.color}">${n.text}</span>`).join(" ");
+}
+$("notesEditBtn").onclick = ()=>{
+  if(!isAdmin) return;
+  $("notesRows").innerHTML = "";
+  (notes.length?notes:[{text:"",color:"plain"}]).forEach(n=>addNoteRow(n.text, n.color));
+  $("notesModal").style.display = "flex";
+};
+function addNoteRow(text, color){
+  const div = document.createElement("div");
+  div.className = "nrow";
+  div.innerHTML = `<input value="${(text||"").replace(/"/g,"&quot;")}" placeholder="提醒文字">
+    <select>${[["plain","無底色"],["yellow","黃底"],["red","紅底"],["blue","藍底"],["green","綠底"],["gray","灰底"]].map(([v,l])=>`<option value="${v}" ${v===color?"selected":""}>${l}</option>`).join("")}</select>
+    <button class="mini" onclick="this.parentElement.remove()">🗑</button>`;
+  $("notesRows").appendChild(div);
+}
+$("noteAdd").onclick = ()=> addNoteRow("", "plain");
+$("noteSave").onclick = async ()=>{
+  const newNotes = [...$("notesRows").querySelectorAll(".nrow")].map(r=>({
+    text: r.querySelector("input").value.trim(),
+    color: r.querySelector("select").value
+  })).filter(n=>n.text);
+  const j = await fnCall({action:"set_notes", notes:newNotes});
+  if(!j.ok){ alert("儲存失敗："+(j.error||"")); return; }
+  notes = j.notes;
+  $("notesModal").style.display = "none";
+  renderNotes();
+};
 
 /* ================= 遞交存檔 / 異動 ================= */
 function monthSubmittedAt(m){
@@ -936,9 +1011,16 @@ function monthAOA(m){
       rows.push(row);
     }
   }
-  return {rows, lateSet};
+  // 底部提醒列
+  const noteRows = new Map();  // R -> color
+  if(notes.length){
+    rows.push([]);
+    for(const n of notes){ noteRows.set(rows.length, n.color); rows.push([n.text]); }
+  }
+  return {rows, lateSet, noteRows};
 }
-function styleSheet(ws, m, lateSet){
+const NOTE_XLSX = {plain:[null,"64748B"], yellow:["FEF9C3","A16207"], red:["FCA5A5","7F1D1D"], blue:["DBEAFE","1D4ED8"], green:["DCFCE7","15803D"], gray:["E2E8F0","475569"]};
+function styleSheet(ws, m, lateSet, noteRows){
   const dim = daysInMonth(yy,m);
   const lastCol = 4+dim+3;
   ws["!cols"] = [{wch:4},{wch:9},{wch:7},{wch:9}, ...Array(dim).fill({wch:3.5}), {wch:9},{wch:9},{wch:9},{wch:9}];
@@ -951,6 +1033,16 @@ function styleSheet(ws, m, lateSet){
     const aCell = ws[XLSX.utils.encode_cell({r:R,c:0})];
     const isUnitRow = aCell && typeof aCell.v==="string" && aCell.v.startsWith("▍");
     if(isUnitRow) ws["!merges"].push({s:{r:R,c:0}, e:{r:R,c:lastCol}});
+    if(noteRows && noteRows.has(R)){
+      // 底部提醒列：整列合併＋依設定上色
+      ws["!merges"].push({s:{r:R,c:0}, e:{r:R,c:lastCol}});
+      const cell = ws[XLSX.utils.encode_cell({r:R,c:0})];
+      if(cell){
+        const [bg,fg] = NOTE_XLSX[noteRows.get(R)] || NOTE_XLSX.plain;
+        cell.s = {alignment:{horizontal:"left", vertical:"center"}, font:{name:F, sz:10, bold:true, color:{rgb:fg}}, ...(bg?{fill:{patternType:"solid", fgColor:{rgb:bg}}}:{})};
+      }
+      continue;
+    }
     for(let C=range.s.c; C<=range.e.c; C++){
       const cell = ws[XLSX.utils.encode_cell({r:R,c:C})];
       if(!cell) continue;
@@ -1011,9 +1103,9 @@ function diffSheet(m){
 }
 $("expMonth").onclick = ()=>{
   const wb = XLSX.utils.book_new();
-  const {rows, lateSet} = monthAOA(mm);
+  const {rows, lateSet, noteRows} = monthAOA(mm);
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  styleSheet(ws, mm, lateSet);
+  styleSheet(ws, mm, lateSet, noteRows);
   XLSX.utils.book_append_sheet(wb, ws, `${yy}.${String(mm).padStart(2,"0")}`);
   const dws = diffSheet(mm);
   if(dws) XLSX.utils.book_append_sheet(wb, dws, "遞交後異動");
@@ -1022,9 +1114,9 @@ $("expMonth").onclick = ()=>{
 $("expYear").onclick = ()=>{
   const wb = XLSX.utils.book_new();
   for(let m=1;m<=12;m++){
-    const {rows, lateSet} = monthAOA(m);
+    const {rows, lateSet, noteRows} = monthAOA(m);
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    styleSheet(ws, m, lateSet);
+    styleSheet(ws, m, lateSet, noteRows);
     XLSX.utils.book_append_sheet(wb, ws, `${yy}.${String(m).padStart(2,"0")}`);
   }
   XLSX.writeFile(wb, `彰化轉運中心${yy}年出勤表(全年).xlsx`);
