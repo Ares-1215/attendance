@@ -998,7 +998,7 @@ $("expStats").onclick = ()=>{
       else cell.s = {alignment:center, font:{name:"微軟正黑體", sz:10}, border};
     }
   }
-  const wb = XLSX.utils.book_new();
+  const wb = newWB();
   XLSX.utils.book_append_sheet(wb, ws, `${yy}年請假統計`);
   XLSX.writeFile(wb, `彰化轉運中心${yy}年請假統計.xlsx`);
 };
@@ -1050,6 +1050,12 @@ function monthAOA(m){
   return {rows, lateSet, noteRows, pickerRows};
 }
 const NOTE_XLSX = {plain:[null,"64748B"], yellow:["FEF9C3","A16207"], red:["FCA5A5","7F1D1D"], blue:["DBEAFE","1D4ED8"], green:["DCFCE7","15803D"], gray:["E2E8F0","475569"]};
+// WPS 開檔自動進入閱讀模式(十字聚焦)：寫入 WPS 自訂文件屬性；MS Excel 會忽略此屬性,無副作用
+function newWB(){
+  const wb = XLSX.utils.book_new();
+  wb.Custprops = {"KSOReadingLayout": true};
+  return wb;
+}
 function styleSheet(ws, m, lateSet, noteRows, pickerRows){
   const dim = daysInMonth(yy,m);
   const lastCol = 4+dim+3;
@@ -1138,7 +1144,7 @@ function diffSheet(m){
   return ws;
 }
 $("expMonth").onclick = ()=>{
-  const wb = XLSX.utils.book_new();
+  const wb = newWB();
   const {rows, lateSet, noteRows, pickerRows} = monthAOA(mm);
   const ws = XLSX.utils.aoa_to_sheet(rows);
   styleSheet(ws, mm, lateSet, noteRows, pickerRows);
@@ -1148,7 +1154,7 @@ $("expMonth").onclick = ()=>{
   XLSX.writeFile(wb, `彰化轉運中心${yy}年${mm}月出勤表.xlsx`);
 };
 $("expYear").onclick = ()=>{
-  const wb = XLSX.utils.book_new();
+  const wb = newWB();
   for(let m=1;m<=12;m++){
     const {rows, lateSet, noteRows, pickerRows} = monthAOA(m);
     const ws = XLSX.utils.aoa_to_sheet(rows);
