@@ -96,6 +96,13 @@ tfoot td{position:sticky; bottom:0; background:var(--footbg); font-weight:bold; 
 tr:hover td{background:var(--hover);}
 tr:hover td.wknd{background:var(--wkndHover);}
 tr:hover td.today{background:var(--todayHover);}
+/* 十字聚焦：hover 的欄位整欄淡色 */
+:root{--colHl:#e0f2fe; --colHlX:#bae6fd;}
+html[data-theme="dark"]{--colHl:#16324f; --colHlX:#1e4266;}
+#grid td.colHl{background:var(--colHl);}
+#grid th.colHl{background:var(--colHl)!important; color:var(--brand)!important;}
+#grid tr:hover td.colHl{background:var(--colHlX);}
+#grid td.day:hover{outline:2px solid var(--brand); outline-offset:-2px;}
 /* 代碼顏色（深色主題共用：淡底深字色塊） */
 .c-1{color:#16a34a;}
 .c-half{color:#0d9488;}
@@ -624,8 +631,8 @@ function renderGrid(){
   for(let d=1;d<=dim;d++){
     const w = wday(yy,mm,d);
     const cls = (d===td?"todayH": (w===0||w===6)?"wkndH":"");
-    h1 += `<th class="dnum ${cls}">${d}</th>`;
-    h2 += `<th class="${cls}">${WD[w]}</th>`;
+    h1 += `<th class="dnum ${cls}" data-d="${d}">${d}</th>`;
+    h2 += `<th class="${cls}" data-d="${d}">${WD[w]}</th>`;
   }
   h1 += `<th>上班</th><th>請假</th><th>排休</th><th>加班</th></tr>`;
   h2 += `<th colspan="4" style="font-size:10px">天數統計</th></tr>`;
@@ -657,7 +664,7 @@ function renderGrid(){
   for(let d=1;d<=dim;d++){
     let n=0;
     for(const e of actives){ const v=getRec(e.emp_no,mm).days[d-1]; const f=parseFloat(v); if(!isNaN(f)&&f>0) n++; }
-    foot += `<td>${n||""}</td>`;
+    foot += `<td data-d="${d}">${n||""}</td>`;
   }
   foot += `<td colspan="4"></td></tr>`;
   $("grid").innerHTML = `<thead>${h1}${h2}</thead><tbody>${body}</tbody><tfoot>${foot}</tfoot>`;
@@ -670,6 +677,21 @@ function renderGrid(){
   }
   updateSubmitUI();
   renderNotes();
+  // 十字聚焦：hover 同步標示整欄
+  const grid = $("grid");
+  let lastCol = null;
+  grid.onmouseover = e=>{
+    const t = e.target.closest("[data-d]");
+    const d = t ? t.dataset.d : null;
+    if(d===lastCol) return;
+    grid.querySelectorAll(".colHl").forEach(x=>x.classList.remove("colHl"));
+    lastCol = d;
+    if(d) grid.querySelectorAll(`[data-d="${d}"]`).forEach(x=>x.classList.add("colHl"));
+  };
+  grid.onmouseleave = ()=>{
+    grid.querySelectorAll(".colHl").forEach(x=>x.classList.remove("colHl"));
+    lastCol = null;
+  };
 }
 
 /* ================= 底部提醒列 ================= */
