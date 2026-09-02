@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>請假卡列印 - 彰化轉運中心</title>
 <style>
-  :root{ --g:#1f8a53; }
+  :root{ --g:#1f8a53; --lt:#8fc7ab; }
   *{ box-sizing:border-box; margin:0; padding:0; }
   body{ background:#e5e7eb; font-family:"Microsoft JhengHei","微軟正黑體",sans-serif; }
 
@@ -45,7 +45,7 @@
   /* ================= 請假卡版面 ================= */
   .page{
     width:297mm; height:210mm; background:#fff;
-    margin:6mm auto; padding:7mm 9mm 5mm 9mm;
+    margin:6mm auto; padding:0;
     position:relative; overflow:hidden;
     box-shadow:0 2px 8px rgba(0,0,0,.25);
     font-family:"DFKai-SB","標楷體","BiauKai","Kaiti TC",serif; color:var(--g);
@@ -57,78 +57,92 @@
     .page{ margin:0; box-shadow:none; page-break-after:always; }
   }
   .page table{ border-collapse:collapse; }
-  .page td, .page th{ border:0.35mm solid var(--g); font-weight:normal; }
 
-  /* ---------- 正面 ---------- */
-  .hdr{ display:flex; align-items:flex-start; margin-bottom:1.5mm; }
-  .hdr-left{ width:88mm; font-size:11pt; line-height:2; padding-top:2mm; }
-  .hdr-mid{ flex:1; text-align:center; }
-  .hdr-right{ width:92mm; font-size:10.5pt; line-height:1.9; padding-top:2mm; }
+  /* ---------- 正面表頭區 ---------- */
+  .hdr{ position:absolute; top:8mm; left:0; right:0; height:23mm; }
+  .hdr-left{ position:absolute; left:13mm; top:2.5mm; font-size:11pt; }
+  .hdr-left .l2{ margin-top:4.6mm; }
+  .hdr-mid{ position:absolute; left:105mm; width:80mm; text-align:center; }
+  .hdr-right{ position:absolute; left:185mm; top:2mm; font-size:10.5pt; line-height:1.6; }
   .blank{
     display:inline-block; border-bottom:0.35mm solid var(--g); min-height:1em;
     vertical-align:bottom; text-align:center; outline:none;
   }
   .blank:focus{ background:#fefce8; }
-  .co{ font-size:20pt; font-weight:bold; letter-spacing:1.5mm; }
-  .cardtitle{ font-size:20pt; font-weight:bold; letter-spacing:9mm; text-indent:9mm; border-bottom:0.5mm solid var(--g); display:inline-block; padding:0 2mm 0.5mm 2mm; margin-top:1mm; }
-  .bodywrap{ display:flex; }
+  .co{ font-size:14.5pt; font-weight:bold; letter-spacing:2mm; text-indent:2mm; white-space:nowrap; }
+  .cardtitle{ font-size:14.5pt; font-weight:bold; letter-spacing:12mm; text-indent:12mm; border-bottom:0.4mm solid var(--g); display:inline-block; padding:1mm 3mm 0.5mm 3mm; margin-top:2mm; white-space:nowrap; }
+
+  /* ---------- 正面主表 ---------- */
+  .bodywrap{ position:absolute; top:31mm; left:2.5mm; right:5mm; display:flex; }
   .sidenote{
     writing-mode:vertical-rl; text-orientation:upright;
-    font-size:9.5pt; letter-spacing:0.6mm; line-height:1;
-    width:6mm; margin-right:1.5mm; padding-top:1mm;
+    font-size:8.2pt; letter-spacing:0.2mm; line-height:1;
+    width:5mm; margin-top:0.5mm;
   }
   .main{ flex:1; }
-  table.grid{ width:100%; table-layout:fixed; }
-  table.grid th, table.grid td{ text-align:center; vertical-align:middle; overflow:hidden; }
-  table.grid th{ font-size:10pt; }
-  th.small{ font-size:6.2pt; padding:0; letter-spacing:0; line-height:1.15; }
-  td.row{ height:6.7mm; }
-  .dcell{ font-size:9pt; white-space:nowrap; }
-  .ampm{ display:inline-block; font-size:6.2pt; line-height:1.15; text-align:left; vertical-align:middle; }
-  .sv-label{ font-size:10.5pt; margin:1.2mm 0 0.8mm 8mm; }
-  .sv-wrap{ display:flex; align-items:center; }
-  .sv-code{ width:8mm; }
-  table.sv{ flex:1; table-layout:fixed; }
-  table.sv th{ font-size:10pt; height:5.4mm; }
-  table.sv td{ height:5.8mm; }
-  .notes{ font-size:9.6pt; line-height:1.5; margin-top:1.2mm; padding-left:8mm; }
+  table.grid{ width:100%; table-layout:fixed; border:0.55mm solid var(--g); }
+  table.grid th, table.grid td{
+    border:0.25mm solid var(--g);
+    text-align:center; vertical-align:middle; overflow:hidden; font-weight:normal;
+  }
+  table.grid th{ font-size:10pt; height:4.5mm; }
+  th.small{ font-size:7pt; padding:0; letter-spacing:0; white-space:nowrap; }
+  td.lt, th.ltb{ border-top-width:0.12mm; border-top-color:var(--lt); border-bottom-width:0.12mm; border-bottom-color:var(--lt); }
+  td.row{ height:7.55mm; }
+  .dcell{ font-size:9pt; white-space:nowrap; padding:0 !important; }
+  .dflex{ display:flex; align-items:center; height:100%; }
+  .dflex .m{ margin-left:14%; }
+  .dflex .d{ margin:0 auto; }
+  .ampm{ display:inline-block; font-size:6.2pt; line-height:1.15; text-align:left; vertical-align:middle; margin-right:0.6mm; }
+
+  /* ---------- 特休排定 ---------- */
+  .sv-label{ position:absolute; top:157.5mm; left:17.4mm; font-size:10.5pt; }
+  table.sv{ position:absolute; top:163.5mm; left:18.3mm; width:273.7mm; table-layout:fixed; border:0.4mm solid var(--g); }
+  table.sv th, table.sv td{ border:0.25mm solid var(--g); font-weight:normal; text-align:center; }
+  table.sv th{ font-size:10pt; height:5.1mm; }
+  table.sv td{ height:9.5mm; }
+
+  /* ---------- 註 ---------- */
+  .notes{ position:absolute; top:181.5mm; left:17.4mm; right:4mm; font-size:9.4pt; line-height:1.42; }
   .notes .n1{ display:flex; }
   .notes .n1 .lbl{ white-space:nowrap; }
   .notes ol{ list-style:none; }
   .notes li{ text-indent:-1.7em; padding-left:1.7em; }
 
   /* ---------- 反面 ---------- */
-  .back{ display:flex; flex-direction:row; height:100%; padding:5mm 0 8mm 0; }
-  .backtable{ flex:1; display:flex; flex-direction:row; border:0.6mm solid var(--g); }
-  .col{ display:flex; flex-direction:column; border-left:0.35mm solid var(--g); }
+  .backtable{
+    position:absolute; top:20.8mm; left:6.6mm; width:267.8mm; height:166.8mm;
+    display:flex; flex-direction:row; border:0.55mm solid var(--g);
+  }
+  .col{ display:flex; flex-direction:column; border-left:0.3mm solid var(--g); overflow:hidden; }
   .col:first-child{ border-left:none; }
   .col-h{
-    height:16mm; display:flex; align-items:center; justify-content:center;
-    border-bottom:0.35mm solid var(--g); font-size:12pt; letter-spacing:2mm; text-indent:2mm;
+    height:19mm; flex:none; display:flex; align-items:center; justify-content:center;
+    border-bottom:0.3mm solid var(--g); font-size:12pt; letter-spacing:2mm; text-indent:2mm;
     white-space:nowrap; overflow:hidden;
   }
   .col-h.tight{ letter-spacing:0.5mm; text-indent:0.5mm; font-size:11pt; }
   .col-b{
-    flex:1; writing-mode:vertical-rl; font-size:8.8pt; line-height:1.5;
-    padding:3mm 2mm 2mm 1mm; overflow:hidden;
+    flex:1; min-height:0; writing-mode:vertical-rl; font-size:8.4pt; line-height:1.4; letter-spacing:0.4mm;
+    padding:2.5mm 1.6mm 2mm 1mm; overflow:hidden;
   }
-  .col-b p{ text-indent:-2em; padding-top:2em; margin-left:0.2mm; }
+  .col-b p{ margin:0; }
   .btitle{
+    position:absolute; right:4mm; top:44mm; width:16mm;
     writing-mode:vertical-rl; text-orientation:upright;
-    font-size:19pt; font-weight:bold; letter-spacing:6mm;
-    padding:8mm 1mm 0 3mm; margin-left:2mm;
+    font-size:13.5pt; font-weight:bold; letter-spacing:8mm; text-align:left;
   }
   .bsub{
     writing-mode:vertical-rl; text-orientation:upright;
-    font-size:11pt; letter-spacing:4mm; padding-top:14mm;
+    font-size:11pt; letter-spacing:7.5mm; padding-top:8mm;
   }
-  .funeral-bottom{ border-top:0.35mm solid var(--g); display:flex; flex-direction:row; height:64mm; }
-  .fcell{ flex:1; display:flex; flex-direction:column; border-left:0.35mm solid var(--g); }
+  .funeral-bottom{ border-top:0.3mm solid var(--g); flex:none; display:flex; flex-direction:row; height:82mm; }
+  .fcell{ flex:1; display:flex; flex-direction:column; border-left:0.3mm solid var(--g); }
   .fcell:first-child{ border-left:none; }
-  .fcell .ftext{ flex:1; writing-mode:vertical-rl; font-size:8.8pt; line-height:1.5; padding:1.5mm 1mm; }
-  .fcell .fday{ border-top:0.35mm solid var(--g); text-align:center; font-size:11pt; height:7mm; line-height:7mm; }
-  .backfoot{ position:absolute; left:11mm; bottom:5mm; font-size:10.5pt; }
-  .backfoot2{ position:absolute; right:60mm; bottom:5mm; font-size:10.5pt; }
+  .fcell .ftext{ flex:1; writing-mode:vertical-rl; font-size:8.2pt; line-height:1.4; letter-spacing:0.3mm; padding:1.5mm 0.8mm; }
+  .fcell .fday{ border-top:0.3mm solid var(--g); text-align:center; font-size:11pt; height:8.2mm; line-height:8.2mm; }
+  .backfoot{ position:absolute; left:7.5mm; top:190.5mm; font-size:9.6pt; }
+  .backfoot2{ position:absolute; left:199mm; top:193.5mm; font-size:9.6pt; }
 </style>
 </head>
 <body>
@@ -196,17 +210,17 @@ function blankSpan(v, w){
 
 function frontPage(d){
   const acc = ["事","家照","病","生理","曠職","職災","職傷","特休","公","教育","志工","安胎","產檢","產","陪產","婚","喪","排休","補休","遲到","早退"];
-  const dcell = `<td class="row dcell">月　日 <span class="ampm">上午<br>下午</span></td>`;
+  const dcell = `<td class="row dcell"><div class="dflex"><span class="m">月</span><span class="d">日</span><span class="ampm">上午<br>下午</span></div></td>`;
   let rows = "";
   for(let i=0;i<15;i++){
-    rows += `<tr><td class="row"></td>${dcell}${dcell}<td></td><td></td><td></td>${"<td></td>".repeat(21)}${"<td></td>".repeat(6)}<td></td></tr>`;
+    rows += `<tr><td class="row"></td>${dcell}${dcell}<td></td><td></td><td></td>${'<td class="lt"></td>'.repeat(21)}${'<td class="lt"></td>'.repeat(4)}</tr>`;
   }
   return `
 <div class="page">
   <div class="hdr">
     <div class="hdr-left">
-      年度：${blankSpan(d.year,20)}　員工編號：${blankSpan(d.empNo,22)}<br>
-      單位：${blankSpan(d.unit,24)}　姓　　名：${blankSpan(d.name,22)}
+      <div>年度：${blankSpan(d.year,25)}　員工編號：${blankSpan(d.empNo,22)}</div>
+      <div class="l2">單位：${blankSpan(d.unit,24)}　姓　　名：${blankSpan(d.name,22)}</div>
     </div>
     <div class="hdr-mid">
       <div class="co">新竹物流股份有限公司</div>
@@ -223,43 +237,41 @@ function frontPage(d){
     <div class="main">
       <table class="grid">
         <colgroup>
-          <col style="width:7.5mm"><col style="width:22mm"><col style="width:22mm">
-          <col style="width:8.5mm"><col style="width:12mm"><col style="width:13mm">
-          <col span="21" style="width:5.05mm"><col span="6" style="width:6.3mm"><col style="width:9.5mm">
+          <col style="width:10.2mm">
+          <col style="width:24.5mm"><col style="width:24.2mm">
+          <col style="width:8.9mm">
+          <col style="width:14.9mm">
+          <col style="width:14.9mm">
+          <col span="21" style="width:6.2mm">
+          <col span="3" style="width:14.2mm">
+          <col style="width:14.1mm">
         </colgroup>
         <tr>
           <th rowspan="2">假<br>別</th>
           <th colspan="2">起　訖　日　期</th>
           <th rowspan="2" style="font-size:9pt">請假<br>日數</th>
-          <th rowspan="2" style="font-size:9pt">請假者</th>
-          <th rowspan="2" style="font-size:9pt">職　務<br>代理人</th>
-          <th colspan="21" style="font-size:9pt">累　計　日　期（請以〝日〞為單位計填）</th>
-          <th colspan="2" style="font-size:9pt">主　管</th>
-          <th colspan="2" style="font-size:9pt">主　管</th>
-          <th colspan="2" style="font-size:9pt">主　管</th>
-          <th style="font-size:9pt">系　統</th>
+          <th rowspan="2" style="font-size:9.5pt">請假者</th>
+          <th rowspan="2" style="font-size:9.5pt">職　務<br>代理人</th>
+          <th colspan="21" style="font-size:9.5pt">累計日期（請以"日"爲單位計填）</th>
+          <th rowspan="2" class="ltb" style="font-size:9.5pt">主　管<br>簽　核</th>
+          <th rowspan="2" class="ltb" style="font-size:9.5pt">主　管<br>簽　核</th>
+          <th rowspan="2" class="ltb" style="font-size:9.5pt">主　管<br>簽　核</th>
+          <th rowspan="2" class="ltb" style="font-size:9.5pt">系　統<br>登錄者</th>
         </tr>
         <tr>
           <th>起</th><th>訖</th>
-          ${acc.map(a=>`<th class="small">${a}</th>`).join("")}
-          <th class="small" style="font-size:8.5pt">簽</th><th class="small" style="font-size:8.5pt">核</th>
-          <th class="small" style="font-size:8.5pt">簽</th><th class="small" style="font-size:8.5pt">核</th>
-          <th class="small" style="font-size:8.5pt">簽</th><th class="small" style="font-size:8.5pt">核</th>
-          <th class="small" style="font-size:8pt">登錄者</th>
+          ${acc.map(a=>`<th class="small ltb">${a}</th>`).join("")}
         </tr>
         ${rows}
       </table>
     </div>
   </div>
   <div class="sv-label">本年度特別休假，您自己於各月排定天數如下：</div>
-  <div class="sv-wrap">
-    <div class="sv-code">&nbsp;</div>
-    <table class="sv">
-      <colgroup><col span="12" style="width:6.2%"><col style="width:7%"><col></colgroup>
-      <tr><th>一月</th><th>二月</th><th>三月</th><th>四月</th><th>五月</th><th>六月</th><th>七月</th><th>八月</th><th>九月</th><th>十月</th><th>十一月</th><th>十二月</th><th>合計</th><th>簽名</th></tr>
-      <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-    </table>
-  </div>
+  <table class="sv">
+    <colgroup><col span="13" style="width:6.32%"><col></colgroup>
+    <tr><th>一月</th><th>二月</th><th>三月</th><th>四月</th><th>五月</th><th>六月</th><th>七月</th><th>八月</th><th>九月</th><th>十月</th><th>十一月</th><th>十二月</th><th>合計</th><th>簽名</th></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </table>
   <div class="notes">
     <div class="n1"><span class="lbl">註：</span>
       <ol>
@@ -268,6 +280,7 @@ function frontPage(d){
         <li>3. 請假時應確實填寫【起訖日期並圈選上午或下午】，請假單位以0.5日計算。</li>
         <li>4. 請假卡以部或所屬單位自行保管，請假時填具有關資料，呈請所屬主管核准後，總公司交人事單位登記；各所則依據資料輸入電腦系統中。</li>
         <li>5. 一旦人員有所調動，請假卡應隨本人至新單位或新站所。</li>
+        <li>6. 遲到、早退超過15分鐘以上者，如未報備，一律以曠職論。</li>
       </ol>
     </div>
   </div>
@@ -277,101 +290,99 @@ function frontPage(d){
 function backPage(){
   return `
 <div class="page">
-  <div class="back">
-    <div class="backtable">
-      <div class="col" style="width:36mm">
-        <div class="col-h">喪假</div>
-        <div class="col-b" style="flex:none; height:78mm">
-          <p>一、工資照給。</p>
-          <p>二、逾期得以特別假或事假抵充。</p>
-          <p>三、喪假可於百日內分次請。</p>
-          <p>四、雇主得要求提出證明文件。</p>
-        </div>
-        <div class="funeral-bottom">
-          <div class="fcell"><div class="ftext">曾祖父母、外曾祖父母、配偶之外祖父母、配偶之祖父母、兄弟姊妹喪亡。</div><div class="fday">3日</div></div>
-          <div class="fcell"><div class="ftext">祖父母、外祖父母、子女、配偶之父母、配偶之養父母或繼父母喪亡。</div><div class="fday">6日</div></div>
-          <div class="fcell"><div class="ftext">父母、養父母、繼父母、配偶喪亡。</div><div class="fday">8日</div></div>
-        </div>
+  <div class="backtable">
+    <div class="col" style="width:33.9mm">
+      <div class="col-h">喪假</div>
+      <div class="col-b" style="flex:none; height:65.7mm">
+        <p>一、工資照給。</p>
+        <p>二、逾期得以特別假或事假抵充。</p>
+        <p>三、喪假可於百日內分次請。</p>
+        <p>四、雇主得要求提出證明文件。</p>
       </div>
-      <div class="col" style="width:44mm">
-        <div class="col-h tight">普通傷病假</div>
-        <div class="col-b">
-          <p>一、未住院者，一年內合計不得超過三十日。</p>
-          <p>二、住院者，二年內合計不得超過一年。</p>
-          <p>三、未住院傷病假與住院傷病假計算，最長二年內累計可請一年。</p>
-          <p>四、安胎假併入住院傷病假計算。</p>
-          <p>五、安胎假期間，如有必要，可改請婚假、喪假、產檢假。</p>
-          <p>六、三十天以內病假者，工資折半發給；超過三十天者，不給工資。</p>
-          <p>七、雇主得要求提出證明文件。</p>
-          <p>八、女性每月得請生理假一日，全年請假日數未逾三日，不併入病假計算，其餘日數併入病假計算；工資折半發給。</p>
-          <p>九、病假超過上述標準者可要求留職停薪一年。</p>
-        </div>
-      </div>
-      <div class="col" style="width:22mm">
-        <div class="col-h">事假</div>
-        <div class="col-b">
-          <p>一、家庭照顧假，一年以七日為限，請假日數併入事假計算。</p>
-          <p>二、一年內合計不得超過十四日；事假期間不給工資。</p>
-          <p>三、逾十四日者，以特別假抵充，如仍逾期，以曠工論。</p>
-          <p>四、遇例假日及休假日扣除不計。</p>
-        </div>
-      </div>
-      <div class="col" style="width:30mm">
-        <div class="col-h tight">公傷病假</div>
-        <div class="col-b">
-          <p>一、因工作中或工作場所中受傷傷病，俗稱職業災害。</p>
-          <p>二、因工作所導致職業傷病。</p>
-          <p>三、日常上下班應經途中發生事故受傷傷病，俗稱職業傷害。</p>
-          <p>四、員工因職業災害受傷，在醫療中不能工作時，雇主應按其原領工資數額予以補償。但同一事故，依勞工保險條例或其他法令規定，已由雇主支付費用補償者，雇主得予以抵充之。</p>
-        </div>
-      </div>
-      <div class="col" style="width:64mm">
-        <div class="col-h tight">產檢假、產假、陪產假</div>
-        <div class="col-b">
-          <p>一、妊娠期間給予產檢假七日，得以半日為請假單位，工資照給。</p>
-          <p>二、妊娠二十週以上分娩者，給產假八星期。</p>
-          <p>三、妊娠三個月以上，未滿六個月流產者，給予產假四星期。</p>
-          <p>四、妊娠二個月以上，未滿三個月流產者，給予產假一星期。</p>
-          <p>五、妊娠未滿二個月流產者，給予產假五日。</p>
-          <p>六、到職滿半年者，工資照給；到職未滿半年者，工資折半發給。</p>
-          <p>七、無胎數之限制；未婚亦可請產假。</p>
-          <p>八、可於產前（妊娠須滿三個月）、產後分開多次申請，產後應一次請足。</p>
-          <p>九、上述產假包含例假日及休假日。逾期者，得以普通傷病假抵充。</p>
-          <p>十、配偶分娩之當日及其前後合計十五日期間內，可擇五日請陪產假，陪產期間工資照給。</p>
-          <p>十一、雇主得要求提出證明文件。</p>
-          <p>十二、到職滿半年後，於子女滿三歲前，得申請育嬰留職停薪，但不得逾二年。</p>
-        </div>
-      </div>
-      <div class="col" style="width:18mm">
-        <div class="col-h">婚假</div>
-        <div class="col-b">
-          <p>一、八日，工資照給。</p>
-          <p>二、自結婚日前十天起，三個月內請足。</p>
-          <p>三、雇主得要求提出證明文件。</p>
-        </div>
-      </div>
-      <div class="col" style="width:15mm">
-        <div class="col-h">教育</div>
-        <div class="col-b">
-          <p>一、公司指派之各項教育訓練期間。</p>
-          <p>二、工資照給。</p>
-        </div>
-      </div>
-      <div class="col" style="width:20mm">
-        <div class="col-h">公假</div>
-        <div class="col-b">
-          <p>一、工資照給。</p>
-          <p>二、軍中教育召集。</p>
-          <p>三、雇主得要求提出證明文件。</p>
-        </div>
-      </div>
-      <div class="col" style="width:13mm">
-        <div class="col-h">假別</div>
-        <div class="col-b" style="text-align:center"><div class="bsub">給假之相關規定</div></div>
+      <div class="funeral-bottom">
+        <div class="fcell"><div class="ftext">曾祖父母、外曾祖父母、配偶之外祖父母、配偶之祖父母、兄弟姊妹喪亡。</div><div class="fday">3日</div></div>
+        <div class="fcell"><div class="ftext">祖父母、外祖父母、子女、配偶之父母、配偶之養父母或繼父母喪亡。</div><div class="fday">6日</div></div>
+        <div class="fcell"><div class="ftext">父母、養父母、繼父母、配偶喪亡。</div><div class="fday">8日</div></div>
       </div>
     </div>
-    <div class="btitle">各種假別一覽表</div>
+    <div class="col" style="width:50.9mm">
+      <div class="col-h tight">普通傷病假</div>
+      <div class="col-b">
+        <p>一、未住院者，一年內合計不得超過三十日。</p>
+        <p>二、住院者，二年內合計不得超過一年。</p>
+        <p>三、未住院傷病假與住院傷病假計算，最長二年內累計可請一年。</p>
+        <p>四、安胎假併入住院傷病假計算。</p>
+        <p>五、安胎假期間，如有必要，可改請婚假、喪假、產檢假。</p>
+        <p>六、三十天以內病假者，工資折半發給；超過三十天者，不給工資。</p>
+        <p>七、雇主得要求提出證明文件。</p>
+        <p>八、女性每月得請生理假一日，全年請假日數未逾三日，不併入病假計算，其餘日數併入病假計算；工資折半發給。</p>
+        <p>九、病假超過上述標準者可要求留職停薪一年。</p>
+      </div>
+    </div>
+    <div class="col" style="width:22.7mm">
+      <div class="col-h">事假</div>
+      <div class="col-b">
+        <p>一、家庭照顧假，一年以七日爲限，請假日數併入事假計算。</p>
+        <p>二、一年內合計不得超過十四日；事假期間不給工資。</p>
+        <p>三、逾十四日者，以特別假抵充，如仍逾期，以曠工論。</p>
+        <p>四、遇例假日及休假日扣除不計。</p>
+      </div>
+    </div>
+    <div class="col" style="width:31.6mm">
+      <div class="col-h tight">公傷病假</div>
+      <div class="col-b">
+        <p>一、因工作中或工作場所中受傷傷病，俗稱職業災害。</p>
+        <p>二、因工作所導致職業傷病。</p>
+        <p>三、日常上下班應經途中發生事故受傷傷病，俗稱職業傷害。</p>
+        <p>四、員工因職業災害受傷，在醫療中不能工作時，雇主應按其原領工資數額予以補償。但同一事故，依勞工保險條例或其他法令規定，已由雇主支付費用補償者，雇主得予以抵充之。</p>
+      </div>
+    </div>
+    <div class="col" style="width:67.7mm">
+      <div class="col-h tight">產檢假、產假、陪產假</div>
+      <div class="col-b">
+        <p>一、妊娠期間給予產檢假七日，得以半日爲請假單位，工資照給。</p>
+        <p>二、妊娠二十週以上分娩者，給產假八星期。</p>
+        <p>三、妊娠三個月以上，未滿六個月流產者，給予產假四星期。</p>
+        <p>四、妊娠二個月以上，未滿三個月流產者，給予產假一星期。</p>
+        <p>五、妊娠未滿二個月流產者，給予產假五日。</p>
+        <p>六、到職滿半年者，工資照給；到職未滿半年者，工資折半發給。</p>
+        <p>七、無胎數之限制；未婚亦可請產假。</p>
+        <p>八、可於產前（妊娠須滿三個月）、產後分開多次申請，產後應一次請足。</p>
+        <p>九、上述產假包含例假日及休假日。逾期者，得以普通傷病假抵充。</p>
+        <p>十、配偶分娩之當日及其前後合計十五日期間內，可擇五日請陪產假，陪產期間工資照給。</p>
+        <p>十一、雇主得要求提出證明文件。</p>
+        <p>十二、到職滿半年後，於子女滿三歲前，得申請育嬰留職停薪，但不得逾二年。</p>
+      </div>
+    </div>
+    <div class="col" style="width:17.4mm">
+      <div class="col-h">婚假</div>
+      <div class="col-b">
+        <p>一、八日，工資照給。</p>
+        <p>二、自結婚日前十天起，三個月內請足。</p>
+        <p>三、雇主得要求提出證明文件。</p>
+      </div>
+    </div>
+    <div class="col" style="width:13.6mm">
+      <div class="col-h">教育</div>
+      <div class="col-b">
+        <p>一、公司指派之各項教育訓練期間。</p>
+        <p>二、工資照給。</p>
+      </div>
+    </div>
+    <div class="col" style="width:17.4mm">
+      <div class="col-h">公假</div>
+      <div class="col-b">
+        <p>一、工資照給。</p>
+        <p>二、軍中教育召集。</p>
+        <p>三、雇主得要求提出證明文件。</p>
+      </div>
+    </div>
+    <div class="col" style="flex:1">
+      <div class="col-h">假別</div>
+      <div class="col-b" style="text-align:center"><div class="bsub">給假之相關規定</div></div>
+    </div>
   </div>
+  <div class="btitle">各種假別一覽表</div>
   <div class="backfoot">【勞基法相關假別因修訂或新增，可依據勞工請假規則或相關解釋函、中央主管機關發佈之法規有關規定辦理。】</div>
   <div class="backfoot2">2021/11 人資處製</div>
 </div>`;
@@ -443,3 +454,4 @@ renderBlank();
 </script>
 </body>
 </html>
+
