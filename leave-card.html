@@ -67,6 +67,8 @@
   .blank{
     display:inline-block; border-bottom:0.35mm solid var(--g); min-height:1em;
     vertical-align:bottom; text-align:center; outline:none;
+    color:#111; font-weight:bold;
+    font-family:var(--fillfont, "DFKai-SB","標楷體",serif);
   }
   .blank:focus{ background:#fefce8; }
   .co{ font-size:14.5pt; font-weight:bold; letter-spacing:2mm; text-indent:2mm; white-space:nowrap; }
@@ -153,6 +155,11 @@
   <span class="spacer"></span>
   年度：<input type="number" id="yearIn" min="100" max="200">
   單位：<input type="text" id="unitIn" value="彰化轉運" style="width:90px">
+  填入字體：<select id="fontSel" style="padding:3px 6px;border:none;border-radius:6px;font-size:14px">
+    <option value="kai">標楷體</option>
+    <option value="hei">微軟正黑體</option>
+    <option value="ming">新細明體</option>
+  </select>
   <button id="modeBlank" class="on">空白卡</button>
   <button id="modeBatch">名冊批次</button>
   <button id="printBtn" class="print">🖨 列印</button>
@@ -449,6 +456,24 @@ $("selAll").onclick = () => document.querySelectorAll(".empCk").forEach(c=>c.che
 $("selNone").onclick = () => document.querySelectorAll(".empCk").forEach(c=>c.checked=false);
 $("genBtn").onclick = genCards;
 $("printBtn").onclick = () => window.print();
+
+/* 填入字體切換（黑色粗體，底卡維持綠色楷體） */
+const FILL_FONTS = {
+  kai:  '"DFKai-SB","標楷體",serif',
+  hei:  '"Microsoft JhengHei","微軟正黑體",sans-serif',
+  ming: '"PMingLiU","新細明體","MingLiU",serif'
+};
+function applyFillFont(){
+  const v = $("fontSel").value;
+  document.documentElement.style.setProperty("--fillfont", FILL_FONTS[v] || FILL_FONTS.kai);
+  try{ localStorage.setItem("lc_fillfont", v); }catch(e){}
+}
+try{
+  const saved = localStorage.getItem("lc_fillfont");
+  if(saved && FILL_FONTS[saved]) $("fontSel").value = saved;
+}catch(e){}
+$("fontSel").onchange = applyFillFont;
+applyFillFont();
 
 renderBlank();
 </script>
