@@ -71,8 +71,8 @@
     font-family:var(--fillfont, "DFKai-SB","標楷體",serif);
   }
   .blank:focus{ background:#fefce8; }
-  .co{ font-size:14.5pt; font-weight:bold; letter-spacing:2mm; text-indent:2mm; white-space:nowrap; }
-  .cardtitle{ font-size:14.5pt; font-weight:bold; letter-spacing:12mm; text-indent:12mm; border-bottom:0.4mm solid var(--g); display:inline-block; padding:1mm 3mm 0.5mm 3mm; margin-top:2mm; white-space:nowrap; }
+  .co{ font-size:15pt; font-weight:bold; letter-spacing:2mm; text-indent:2mm; white-space:nowrap; }
+  .cardtitle{ font-size:15pt; font-weight:bold; letter-spacing:12mm; text-indent:12mm; border-bottom:0.4mm solid var(--g); display:inline-block; padding:1mm 3mm 0.5mm 3mm; margin-top:2mm; white-space:nowrap; }
 
   /* ---------- 正面主表 ---------- */
   .bodywrap{ position:absolute; top:31mm; left:2.5mm; right:5mm; display:flex; }
@@ -87,15 +87,16 @@
     border:0.25mm solid var(--g);
     text-align:center; vertical-align:middle; overflow:hidden; font-weight:normal;
   }
-  table.grid th{ font-size:10pt; height:4.5mm; }
-  th.small{ font-size:7pt; padding:0; letter-spacing:0; white-space:nowrap; }
+  table.grid th{ font-size:10pt; height:4.5mm; line-height:1.15; }
+  th.small{ font-size:8pt; padding:0; letter-spacing:0; white-space:nowrap; }
+  th.small.s2{ font-size:6.2pt; }
   td.lt, th.ltb{ border-top-width:0.12mm; border-top-color:var(--lt); border-bottom-width:0.12mm; border-bottom-color:var(--lt); }
-  td.row{ height:7.55mm; }
-  .dcell{ font-size:9pt; white-space:nowrap; padding:0 !important; }
+  td.row{ height:7.68mm; }
+  .dcell{ font-size:10pt; white-space:nowrap; padding:0 !important; }
   .dflex{ display:flex; align-items:center; height:100%; }
-  .dflex .m{ margin-left:14%; }
-  .dflex .d{ margin:0 auto; }
-  .ampm{ display:inline-block; font-size:6.2pt; line-height:1.15; text-align:left; vertical-align:middle; margin-right:0.6mm; }
+  .dflex .m{ margin-left:24%; }
+  .dflex .d{ margin-left:auto; }
+  .ampm{ display:inline-block; font-size:6.5pt; line-height:1.15; text-align:left; vertical-align:middle; margin-left:0.8mm; margin-right:1.2mm; }
 
   /* ---------- 特休排定 ---------- */
   .sv-label{ position:absolute; top:157.5mm; left:17.4mm; font-size:10.5pt; }
@@ -105,7 +106,8 @@
   table.sv td{ height:9.5mm; }
 
   /* ---------- 註 ---------- */
-  .notes{ position:absolute; top:181.5mm; left:17.4mm; right:4mm; font-size:9.4pt; line-height:1.42; }
+  .notes{ position:absolute; top:181.5mm; left:17.4mm; right:4mm; font-size:9.6pt; line-height:1.34; }
+  .jsp{ display:flex; justify-content:space-between; padding:0 2.2mm; }
   .notes .n1{ display:flex; }
   .notes .n1 .lbl{ white-space:nowrap; }
   .notes ol{ list-style:none; }
@@ -260,14 +262,14 @@ function frontPage(d){
           <th rowspan="2" style="font-size:9.5pt">請假者</th>
           <th rowspan="2" style="font-size:9.5pt">職　務<br>代理人</th>
           <th colspan="21" style="font-size:9.5pt">累計日期（請以"日"爲單位計填）</th>
-          <th rowspan="2" class="ltb" style="font-size:9.5pt">主　管<br>簽　核</th>
-          <th rowspan="2" class="ltb" style="font-size:9.5pt">主　管<br>簽　核</th>
-          <th rowspan="2" class="ltb" style="font-size:9.5pt">主　管<br>簽　核</th>
-          <th rowspan="2" class="ltb" style="font-size:9.5pt">系　統<br>登錄者</th>
+          <th rowspan="2" class="ltb" style="font-size:9.5pt"><div class="jsp"><span>主</span><span>管</span></div><div class="jsp"><span>簽</span><span>核</span></div></th>
+          <th rowspan="2" class="ltb" style="font-size:9.5pt"><div class="jsp"><span>主</span><span>管</span></div><div class="jsp"><span>簽</span><span>核</span></div></th>
+          <th rowspan="2" class="ltb" style="font-size:9.5pt"><div class="jsp"><span>主</span><span>管</span></div><div class="jsp"><span>簽</span><span>核</span></div></th>
+          <th rowspan="2" class="ltb" style="font-size:9.5pt"><div class="jsp"><span>系</span><span>統</span></div><div class="jsp"><span>登</span><span>錄</span><span>者</span></div></th>
         </tr>
         <tr>
           <th>起</th><th>訖</th>
-          ${acc.map(a=>`<th class="small ltb">${a}</th>`).join("")}
+          ${acc.map(a=>`<th class="small${a.length>1?" s2":""} ltb">${a}</th>`).join("")}
         </tr>
         ${rows}
       </table>
@@ -479,4 +481,7 @@ renderBlank();
 </script>
 </body>
 </html>
+
+
+
 
